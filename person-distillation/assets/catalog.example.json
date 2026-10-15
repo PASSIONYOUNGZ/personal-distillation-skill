@@ -1,0 +1,12 @@
+[
+  {
+    "id": "example-article",
+    "title": "示例文章（替换为真实材料）",
+    "topic": "工作方法",
+    "date": "",
+    "summary": "",
+    "recommendation_stars": null,
+    "sources": [{"platform": "个人站", "id": "example", "url": "https://example.org/article", "kind": "图文"}],
+    "materials": [{"main": true, "file": "materials/article.txt", "format": "text", "role": "article", "platform": "个人站", "url": "https://example.org/article", "coverage": "实际读取后填写"}]
+  }
+]

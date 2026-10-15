@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+.tools/
+.distill/
+.env
+.env.*
+work/
+outputs/
+environment.json
+access.json
+user-settings.json
+.DS_Store
+Thumbs.db

@@ -1,0 +1,149 @@
+{
+  "note": "分别取所需对象落盘，所有待核字段必须来自实际观察。文件不含账号会话。",
+  "access.json": {
+    "inventory_reviewed": false,
+    "inventory_evidence": [],
+    "channels": [
+      {
+        "name": "示例站",
+        "url": "https://example.org/author",
+        "required": true,
+        "mainstream": true,
+        "browser": null,
+        "login_supported": false,
+        "source_id": "example-author",
+        "preparation_probe_completed": false,
+        "preparation_probe_evidence": [],
+        "needed": [
+          "catalog",
+          "text"
+        ],
+        "capabilities": {
+          "catalog": {
+            "status": "not_checked",
+            "evidence": [],
+            "observed_at": null,
+            "pagination_verified": false,
+            "end_verified": false,
+            "transport": "browser",
+            "route_id": "native-browser",
+            "sample_verified": false
+          },
+          "text": {
+            "status": "not_checked",
+            "evidence": [],
+            "observed_at": null,
+            "transport": "browser",
+            "route_id": "native-browser",
+            "sample_verified": false
+          }
+        },
+        "platform": "示例站",
+        "source_role": "catalog",
+        "necessity": "core",
+        "session_ref": null,
+        "decision": "continue"
+      }
+    ]
+  },
+  "X_channel": {
+    "name": "X",
+    "source_id": "example-x-author",
+    "url": "https://x.com/example",
+    "required": true,
+    "mainstream": true,
+    "browser": null,
+    "browser_scope": "external",
+    "browser_connected": false,
+    "browser_evidence": [],
+    "browser_connection_requires_user": false,
+    "browser_connection_instructions": null,
+    "preparation_probe_completed": false,
+    "preparation_probe_evidence": [],
+    "needed": [
+      "catalog",
+      "text"
+    ],
+    "capabilities": {
+      "catalog": {
+        "status": "not_checked",
+        "browser": null,
+        "evidence": [],
+        "observed_at": null,
+        "pagination_verified": false,
+        "transport": "browser",
+        "route_id": "x-external-browser",
+        "session_ref": null
+      },
+      "text": {
+        "status": "not_checked",
+        "browser": null,
+        "evidence": [],
+        "observed_at": null,
+        "transport": "browser",
+        "route_id": "x-external-browser",
+        "session_ref": null
+      }
+    },
+    "platform": "X",
+    "source_role": "catalog",
+    "necessity": "core",
+    "session_ref": null,
+    "decision": "continue"
+  },
+  "observation.json": {
+    "purpose": "probe",
+    "probe_round": "initial",
+    "channel": "示例站",
+    "capability": "catalog",
+    "route": "native-browser",
+    "source_kind": "native",
+    "catalog_kind": "chronological",
+    "outcome": "error",
+    "evidence": [],
+    "item_ids": [],
+    "duration_seconds": null,
+    "source_id": "example-author",
+    "route_id": "native-browser",
+    "transport": "browser",
+    "session_ref": null
+  },
+  ".distill/source-ledger.json": {
+    "discovery_reviewed": false,
+    "discovery_evidence": [],
+    "sources": []
+  },
+  ".distill/scope-review.json": {
+    "request": null,
+    "as_of": null,
+    "timezone": null,
+    "selected_ids": [],
+    "dedup_status": "not_checked",
+    "dedup_evidence": [],
+    "ordering_evidence": [],
+    "channels": [],
+    "scope_as_of": null
+  },
+  "channel_coverage_record": {
+    "source_id": "example-author",
+    "platform": "示例站",
+    "status": "not_checked",
+    "source_kind": "native",
+    "catalog_kind": "chronological",
+    "identity_verified": false,
+    "recent_head_verified": false,
+    "continuous": false,
+    "oldest_contiguous_date": null,
+    "stop_reason": null,
+    "evidence": [],
+    "end_evidence": []
+  },
+  "schema_version": 2,
+  "X_public_text_capability": {
+    "status": "unknown",
+    "transport": "public_http",
+    "route_id": "x-public-post",
+    "evidence": [],
+    "observed_at": null
+  }
+}

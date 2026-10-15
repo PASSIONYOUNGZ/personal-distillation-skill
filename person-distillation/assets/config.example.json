@@ -1,0 +1,8 @@
+{
+  "person": {"name": "待蒸馏人物", "aliases": [], "seed_urls": []},
+  "output": {"mode": "local", "primary": "html", "formats": ["html", "md"]},
+  "scope": {"user_confirmed": false, "collection": {"mode": "discovery_only"}, "distillation": {"mode": "not_selected"}},
+  "batch": {"size": 10, "network_timeout_seconds": 30, "failure_budget": 2},
+  "tools": {},
+  "scope_note": "本轮已发现的公开来源，非全网穷尽。"
+}

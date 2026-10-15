@@ -1,0 +1,1 @@
+请从 https://github.com/PASSIONYOUNGZ/personal-distillation-skill 安装 Personal Distillation Skill，先阅读 AGENT_INSTALL.md，在当前 Agent 支持的技能目录中完成安装、部署和自检，按需准备依赖，最后报告可用能力及仍需人工连接的事项。
