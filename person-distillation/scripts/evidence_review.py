@@ -45,6 +45,8 @@ def inputs(w):
     d=w/'.distill';selection=read(d/'selection.json');ids=selection['items']
     catalog={x['id']:x for x in read(d/'catalog.json')};cards={x['item_id']:x for x in read(d/'cards.json')}
     result={'items':{},'profile':read(d/'profile.json') if (d/'profile.json').exists() else None,'notes':{}}
+    if (d/'reading-units.json').exists():
+        result['reading_units']=read(d/'reading-units.json')
     def file_hash(name):
         p=local(w,name)
         if not p.is_file(): raise ValueError('Review input missing: '+name)
@@ -83,6 +85,8 @@ def person_fingerprint(data):
     for group in ('biography','traits','directions','topic_navigation'):
         for entry in profile.get(group,[]):
             if isinstance(entry,dict):related.update(entry.get('items',[]))
+    for method in profile.get('methods',[]):
+        related.update(e.get('item_id') for e in method.get('evidence',[]) if isinstance(e,dict) and e.get('item_id'))
     return fingerprint({'profile':profile,'notes':data.get('notes'),'profile_image':data.get('profile_image'),'background_files':data.get('background_files'),
                         'related_items':{i:data['items'].get(i) for i in sorted(related)}})
 
@@ -90,20 +94,64 @@ def person_fingerprint(data):
 def comprehension_valid(item,review):
     """Check the declared source-to-reader mapping, never assert semantic truth."""
     card=item.get('card') or {};parts=card.get('analysis_sections') or []
-    if not parts and card.get('interpretation_kind')!='brief':return False
+    if not parts and card.get('interpretation_kind')!='brief' and card.get('reading_layer')!='viewpoint':return False
     labels={p.get('title') for p in parts} if parts else {'正文'}
     rows=review.get('comprehension',[])
     return bool(rows) and all(isinstance(r,dict) and r.get('source_point') and r.get('evidence_locator') and r.get('reader_section') in labels for r in rows)
 
+def review_contract(request):
+    return {'version':4 if request.get('schema_version',2)>=4 else 3 if request.get('scope',{}).get('minimum_stars',1)>1 else 2}
+
+def validate_reading_inputs(data,request):
+    """A valid evidence receipt cannot precede a structurally valid reading model."""
+    from reading_units import reading_units,methods
+    items=[{**v['catalog'],**(v.get('card') or {})} for v in data['items'].values()]
+    shaped={'profile':data.get('profile') or {},'items':items}
+    if 'reading_units' in data:shaped['reading_units']=data['reading_units']
+    reading_units(shaped,request.get('scope',{}).get('viewpoint_limit'))
+    methods(shaped['profile'],[i['id'] for i in items])
+    if request.get('schema_version',2)>=4:
+        for item in items:
+            if item.get('reading_layer') not in ('deep','viewpoint'):raise ValueError('New research must explicitly classify deep/viewpoint reading_layer after reading')
+            if item['reading_layer']=='deep' and not item.get('analysis_sections'):raise ValueError('Deep interpretations need source-shaped explanatory sections')
+
+def unit_inputs(data):
+    """A changed source or grouping invalidates only its dependent reading unit."""
+    result={}
+    units=data.get('reading_units',[])
+    if not isinstance(units,list):raise ValueError('reading-units.json must contain a list')
+    for unit in units:
+        ident=unit.get('id')
+        if not ident or ident in result:raise ValueError('Duplicate/missing reading unit ID')
+        refs=unit.get('item_ids',[])
+        if not refs or len(refs)!=len(set(refs)) or set(refs)-set(data['items']):raise ValueError('Reading unit source references invalid')
+        result[ident]={'unit':unit,'items':{i:data['items'][i] for i in refs}}
+    return result
+
+def unit_review_valid(value, review):
+    unit=value['unit']
+    labels={p.get('title') for p in unit.get('analysis_sections',[])}
+    if unit.get('paragraphs'):labels.add('正文')
+    if unit.get('context','').strip():labels.add('背景')
+    if unit.get('attribution','').strip():labels.add('归属')
+    rows=review.get('comprehension',[])
+    return (checks_valid(review.get('checks')) and bool(rows) and
+            all(isinstance(r,dict) and r.get('item_id') in unit['item_ids'] and r.get('source_point') and
+                r.get('evidence_locator') and r.get('reader_section') in labels for r in rows) and
+            {r['item_id'] for r in rows}==set(unit['item_ids']))
+
 def accept_quality(w, spec):
     data=inputs(w);ids=set(data['items']);path=w/'.distill/quality-review.json'
     previous=read(path) if path.exists() else {}
+    request=read(w/'request.json') if (w/'request.json').exists() else {}
+    validate_reading_inputs(data,request)
+    contract=review_contract(request)
+    reusable=contract['version']<4 or previous.get('review_contract')==contract
     current_hashes={i:fingerprint(v) for i,v in data['items'].items()}
-    retained={r['item_id']:r for r in previous.get('items',[]) if r.get('item_id') in ids and
+    retained={r['item_id']:r for r in previous.get('items',[]) if reusable and r.get('item_id') in ids and
               previous.get('item_fingerprints',{}).get(r['item_id'])==current_hashes[r['item_id']] and checks_valid(r.get('checks'))}
     incoming=spec.get('items',[])
-    request=read(w/'request.json') if (w/'request.json').exists() else {}
-    requires_comprehension=request.get('scope',{}).get('minimum_stars',1)>1
+    requires_comprehension=request.get('schema_version',2)>=4 or request.get('scope',{}).get('minimum_stars',1)>1
     if len(incoming)!=len({r.get('item_id') for r in incoming}) or any(r.get('item_id') not in ids for r in incoming):
         raise ValueError('Review item IDs duplicate or outside selected set')
     for r in incoming:
@@ -118,11 +166,26 @@ def accept_quality(w, spec):
     if requires_comprehension and any(not comprehension_valid(data['items'][i],retained[i]) for i in ids):raise ValueError('Missing current source-to-reader comprehension review')
     phash=person_fingerprint(data)
     claims=spec.get('person_claims')
-    if not claims and previous.get('person_fingerprint')==phash:claims=previous.get('person_claims')
+    if not claims and reusable and previous.get('person_fingerprint')==phash:claims=previous.get('person_claims')
     if not checks_valid(claims):raise ValueError('Review supported person/learning claims separately')
+    units=unit_inputs(data)
+    unit_hashes={i:fingerprint(v) for i,v in units.items()}
+    unit_reviews={r['unit_id']:r for r in previous.get('unit_reviews',[]) if reusable and r.get('unit_id') in units and
+                  previous.get('unit_fingerprints',{}).get(r['unit_id'])==unit_hashes[r['unit_id']] and unit_review_valid(units[r['unit_id']],r)}
+    incoming_units=spec.get('unit_reviews',[])
+    if len(incoming_units)!=len({r.get('unit_id') for r in incoming_units}):raise ValueError('Duplicate unit review')
+    for row in incoming_units:
+        ident=row.get('unit_id')
+        if ident not in units or not unit_review_valid(units[ident],row):raise ValueError('Reading unit review needs each source mapped to actual prose and evidence checks')
+        unit_reviews[ident]=row
+    if set(unit_reviews)!=set(units):raise ValueError('Reading units need current evidence review: '+','.join(sorted(set(units)-set(unit_reviews))))
+    if request.get('schema_version',2)>=4:
+        methods=(data.get('profile') or {}).get('methods',[])
+        if {m['id'] for m in methods}-{c.get('method_id') for c in claims}:raise ValueError('Review each method claim with its method_id, evidence and applicability')
     receipt={'schema_version':2,'overall_status':'reviewed','reviewed_ids':sorted(ids),'items':[retained[i] for i in sorted(ids)],
              'person_claims':claims,'input_fingerprint':fingerprint(data),'item_fingerprints':current_hashes,'person_fingerprint':phash,
-             'review_basis':'Agent read actual evidence; hash binding does not certify semantic truth.'}
+             'review_contract':contract,'review_basis':'Agent read actual evidence; hash binding does not certify semantic truth.'}
+    if units:receipt.update(unit_reviews=[unit_reviews[i] for i in sorted(units)],unit_fingerprints=unit_hashes)
     path.write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     return receipt
 
@@ -134,7 +197,14 @@ def quality_status(w):
         current=inputs(w);rows=r.get('items',[])
         valid=bool(rows) and len(rows)==len(current['items']) and {v.get('item_id') for v in rows}==set(current['items']) and r.get('schema_version')==2 and r.get('overall_status')=='reviewed' and checks_valid(r.get('person_claims')) and all(checks_valid(v.get('checks')) for v in r.get('items',[])) and r.get('input_fingerprint')==fingerprint(current)
         request=read(w/'request.json') if (w/'request.json').exists() else {}
-        if request.get('scope',{}).get('minimum_stars',1)>1:valid=valid and all(comprehension_valid(current['items'][row['item_id']],row) for row in rows)
+        validate_reading_inputs(current,request)
+        if request.get('schema_version',2)>=4:
+            valid=valid and r.get('review_contract')==review_contract(request)
+            valid=valid and not ({m['id'] for m in (current.get('profile') or {}).get('methods',[])}-{c.get('method_id') for c in r.get('person_claims',[])})
+        if request.get('schema_version',2)>=4 or request.get('scope',{}).get('minimum_stars',1)>1:valid=valid and all(comprehension_valid(current['items'][row['item_id']],row) for row in rows)
+        units=unit_inputs(current)
+        unit_rows={row.get('unit_id'):row for row in r.get('unit_reviews',[])}
+        valid=valid and set(units)==set(unit_rows) and all(unit_review_valid(value,unit_rows[i]) and r.get('unit_fingerprints',{}).get(i)==fingerprint(value) for i,value in units.items())
     except (ValueError,KeyError,OSError):valid=False
     return bool(valid),'Current bound review' if valid else 'Review missing, legacy, tampered or stale'
 

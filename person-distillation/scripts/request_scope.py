@@ -4,10 +4,33 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import copy
 
 MODES = ('count', 'time', 'count_in_time', 'all', 'representative', 'provided')
+KINDS = ('article', 'video', 'project', 'product', 'post', 'interview')
+
+
+def normalize_kind(value):
+    """Normalize declared source forms only; never infer quality from length/title."""
+    if not isinstance(value, str): return None
+    aliases = {'text': 'article', '文章': 'article', '长文': 'article', '图文': 'article',
+               '视频': 'video', '项目': 'project', 'repository': 'project', 'repo': 'project',
+               '产品': 'product', 'note': 'post', 'tweet': 'post', '短贴': 'post', '短帖': 'post',
+               '帖子': 'post', '访谈': 'interview'}
+    value = value.strip().casefold()
+    value = aliases.get(value, value)
+    return value if value in KINDS else None
+
+
+def kind_decision(scope, item):
+    """Unknown forms cannot silently disappear from an exact latest frontier."""
+    only = scope.get('content_preferences', {}).get('only_kinds', [])
+    if not only: return 'allowed'
+    kind = normalize_kind(item.get('kind'))
+    return 'unknown' if kind is None else 'allowed' if kind in only else 'excluded'
 
 
 def normalize(value):
     value = copy.deepcopy(value)
+    version = value.setdefault('schema_version', 2)
+    if type(version) is not int or version not in (2, 3, 4): raise ValueError('Unsupported request schema_version')
     person = value.get('person', {})
     if not isinstance(person, dict): raise ValueError('Invalid person')
     urls = person.setdefault('seed_urls', [])
@@ -44,12 +67,33 @@ def normalize(value):
     if 'minimum_stars' in s and (type(s['minimum_stars']) is not int or not 1<=s['minimum_stars']<=5):raise ValueError('minimum_stars must be 1..5')
     if s['unit'] not in ('total', 'per_platform') or s['order'] not in ('latest', 'representative'):
         raise ValueError('Invalid unit/order')
+    if version >= 4:
+        preferences = s.setdefault('content_preferences', {})
+        if not isinstance(preferences, dict): raise ValueError('content_preferences must be an object')
+        if set(preferences) - {'prefer_kinds', 'only_kinds', 'balance'}: raise ValueError('Unknown content preference')
+        for field in ('prefer_kinds', 'only_kinds'):
+            declared = preferences.setdefault(field, [])
+            if not isinstance(declared, list): raise ValueError(field + ' must be a list of content forms')
+            kinds = [normalize_kind(kind) for kind in declared]
+            if any(kind is None for kind in kinds): raise ValueError(field + ' contains unknown content form')
+            preferences[field] = list(dict.fromkeys(kinds))
+        preferences.setdefault('balance', 'balanced')
+        if preferences['balance'] not in ('balanced', 'depth', 'viewpoints'): raise ValueError('Invalid content balance')
+        if preferences['only_kinds'] and set(preferences['prefer_kinds']) - set(preferences['only_kinds']):
+            raise ValueError('Preferred content forms conflict with only_kinds')
+        if 'viewpoint_limit' in s and (type(s['viewpoint_limit']) is not int or s['viewpoint_limit'] < 0):
+            raise ValueError('viewpoint_limit must be a nonnegative reading-unit limit, not a source count')
+        if mode in ('count', 'count_in_time') and s['order'] != 'latest':
+            raise ValueError('Exact counts retain latest order; use bounded representative sample_budget for balanced selection')
+        if mode == 'representative' and s['order'] != 'representative':
+            raise ValueError('Representative scope requires representative order')
+    elif 'content_preferences' in s or 'viewpoint_limit' in s:
+        raise ValueError('Content preferences and viewpoint_limit require request schema_version 4')
     if s['count_basis'] not in ('work_version', 'publication'): raise ValueError('Invalid count_basis')
     if not isinstance(s['platforms'], list) or any(not isinstance(p, str) or not p.strip() for p in s['platforms']): raise ValueError('Invalid platforms')
     if s.get('as_of'):
         instant = datetime.fromisoformat(s['as_of'].replace('Z', '+00:00'))
         if instant.tzinfo is None: raise ValueError('scope.as_of must include the actual UTC offset; agent supplies it without another user question')
-    value.setdefault('schema_version', 2)
     return value
 
 
@@ -80,6 +124,18 @@ def sort_date(item):
     return item.get('sort_date') or item.get('date')
 
 
+def ordering_value(item, scope):
+    """A validated ordering value, normalized to the recorded task clock when available."""
+    value = sort_date(item)
+    if not isinstance(value, str): return None
+    try:
+        if len(value) == 10: return date.fromisoformat(value).isoformat()
+        instant = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        if instant.tzinfo is None: return None
+        return publication_value(value, scope) if scope.get('as_of') else instant.isoformat()
+    except (ValueError, TypeError, KeyError): return None
+
+
 def check_selection(request, items, by_platform=None):
     request = normalize(request); s = request['scope']; errors = []
     if not items: errors.append('No selected items')
@@ -100,13 +156,19 @@ def check_selection(request, items, by_platform=None):
                 if assigned != set(lookup): errors.append('Platform selection and delivered union differ')
     for item in items:
         if s['platforms'] and not any(x['platform'] in s['platforms'] for x in item['sources']): errors.append('Item outside platforms: ' + item['id'])
-        if s['mode'] in ('time', 'count_in_time'):
-            d = sort_date(item)
+        kind_status = kind_decision(s, item)
+        if kind_status != 'allowed': errors.append(('Item content form unknown: ' if kind_status == 'unknown' else 'Item outside only_kinds: ') + item['id'])
+        if s['mode'] in ('time', 'count_in_time') or (s['mode'] == 'representative' and s.get('start')):
+            d = ordering_value(item, s)
             try: valid = isinstance(d, str) and date.fromisoformat(s['start']) <= date.fromisoformat(d[:10]) <= date.fromisoformat(s['end'])
             except ValueError: valid = False
             if not valid: errors.append('Item date unknown/outside interval: ' + item['id'])
         if s.get('as_of') and sort_date(item):
             try:
-                if date.fromisoformat(sort_date(item)[:10]) > datetime.fromisoformat(s['as_of'].replace('Z', '+00:00')).date(): errors.append('Item published after as_of: ' + item['id'])
+                d=ordering_value(item,s)
+                if not d: raise ValueError('Invalid ordering date')
+                observed=datetime.fromisoformat(publication_value(s['as_of'],s))
+                after=datetime.fromisoformat(d)>observed if len(d)>10 else date.fromisoformat(d)>observed.date()
+                if after: errors.append('Item published after as_of: ' + item['id'])
             except (ValueError, TypeError): errors.append('Invalid ordering date: ' + item['id'])
     return errors

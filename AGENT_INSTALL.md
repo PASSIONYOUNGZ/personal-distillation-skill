@@ -24,6 +24,8 @@ python <installed-skill>/scripts/bootstrap.py --workspace <research-workspace> -
 python <installed-skill>/scripts/bootstrap.py --workspace <research-workspace> --profile media --apply
 ```
 
+The research workspace stores its own binding and receipts; compatible dependencies/models are verified and reused in the host-managed runtime cache across tasks. A new workspace must not trigger a needless reinstall. Add `--image-review` to plan/apply only when Pillow-based frame inspection is needed, and use the exact interpreter reported by bootstrap.
+
 Only if transcription is needed and Whisper is the chosen suitable route:
 
 ```text

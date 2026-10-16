@@ -80,7 +80,7 @@ def build(w):
     output=[]
     for ident in chosen:
         item=copy.deepcopy(by_id[ident]);card=normalize_card(by_card[ident])
-        for k in ('summary','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage'):
+        for k in ('summary','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage','reading_layer','interpretation_kind'):
             if k in card:item[k]=copy.deepcopy(card[k])
         item.setdefault('summary','');item.setdefault('what','')
         item['learning']=card.get('learning') or ([card['workflow']] if card.get('workflow') else [])
@@ -123,6 +123,13 @@ def build(w):
         item['transcripts']=ts
         output.append(item)
     result={'profile':copy.deepcopy(profile),'items':output}
+    from reading_units import reading_units,methods
+    units_path=d/'reading-units.json'
+    if units_path.is_file():result['reading_units']=required(units_path)
+    # Validation keeps original fields and provenance intact; only an explicit
+    # layer declaration enables the new reading architecture.
+    reading_units(result,(request or {}).get('scope',{}).get('viewpoint_limit'))
+    methods(result['profile'],[item['id'] for item in output])
     if profile.get('hero_image'):result['profile']['hero_image']=picture(profile['hero_image'])
     if profile.get('avatar'):result['profile']['avatar']=picture(profile['avatar'])
     from user_settings import import_creator

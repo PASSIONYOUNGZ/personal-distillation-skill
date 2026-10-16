@@ -6,6 +6,8 @@
 
 `distill.py`命令自动记开始/结束及异常；`bootstrap.py --apply`为每步记setup，包含安装超时；`video_tools.py --workspace <任务目录>`为字幕、提音、ASR记时，whisper-batch另拆模型加载、逐项转写和缓存复用；`read_public_article.py --workspace <任务目录>`记正文获取。调用这些入口时传入实际workspace；同一动作不要再人工复制一份计时。获取回执中有工具真实起止/秒数时仍按原合同登记，不反推缺失时间。
 
+bootstrap另记录包含全部步骤的runtime阶段、跨进程锁等待和任务内bootstrap回执。回执区分cold/warm/legacy-reuse/repair/warm-model-download、包版本、模型revision与实际总秒数；运行时在当前用户缓存跨任务重用，但计时与binding留各自任务。warm仍包含本地import/版本/工具核查，不将缓存存在算零耗时或媒体已就绪。单条Whisper/SenseVoice成功后也从引擎metadata.duration记录media_seconds；批量保持逐项指标，不把相同媒体时长在父阶段再次累计。
+
 浏览器工具调用和Agent阅读/写作不发生在上述Python命令里，必须按真实批次补窗口。init后开始本轮task窗口，在平台轻探、目录枚举、批量获取、原稿理解、写作、验收等**切换时**开始/结束phase；只对发生的操作记录，不先填写一批已完成事件。每批若干作品即可，不逐段/逐次点击调用脚本。所有阶段可以复用一个Python驱动，减少记录本身的工具往返。
 
 ```text
@@ -13,6 +15,8 @@ python <skill>/scripts/performance_trace.py --workspace <任务目录> start --s
 python <skill>/scripts/performance_trace.py --workspace <任务目录> start --stage review --operation reading-batch --category source_reading --kind phase --batch-id batch-01
 python <skill>/scripts/performance_trace.py --workspace <任务目录> end --span-id <刚返回的阅读span_id> --items 5
 ```
+
+`stage`与`category`是两个字段：理解用`stage=review, category=source_reading`，写作用`stage=writing, category=writing`，审阅验收用`stage=verification, category=verification`。`review`不是category值。
 
 保留返回的span_id，在实际工作结束后关闭对应项。最后交付/本轮中断时结束task窗口，task自身不算已分类工作。跨CLI的窗口是UTC墙钟，包含Agent、宿主调度与窗口内工具；它不是模型纯计算。浏览器批次使用category=browser、kind=phase；只有确实包住单次工具执行的Python span/真实工具回执才能称工具用时。跨进程父子关系可用`--parent-id`登记；同进程会自动继承。阶段名见runlog.STAGES，category/kind由CLI帮助列出。
 

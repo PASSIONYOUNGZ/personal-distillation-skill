@@ -9,11 +9,23 @@ class Element {
  contains(x){return x===this;} querySelector(s){return this.nodes[s]??=new Element();}
  getBoundingClientRect(){return {top:0,bottom:20,width:600,left:0,right:600};} scrollIntoView(){}
 }
-function fixture(storageFails=false){
+function fixture(storageFails=false,layered=false){
  const nodes={},node=id=>nodes[id]??=new Element();
  const cards=[new Element({search:'alpha article',topic:'Design',stars:'5'}),new Element({search:'beta article',topic:'Ops',stars:'4'})];
  cards[0].open=true;
- const row=card=>new Element({item:card===cards[0]?'a':'b'}),rows=[row(cards[0]),row(cards[1]),row(cards[0]),row(cards[1])];
+ const row=card=>new Element({item:card===cards[0]?'a':'b'});let rows=[row(cards[0]),row(cards[1]),row(cards[0]),row(cards[1])];
+ const units=[],layers=[];let disclosureCards=cards;
+ if(layered){
+  cards[0].dataset.sourceIds='a';cards[0].dataset.layer='deep';cards[0].tagName='DETAILS';
+  cards[0].classList={contains:x=>['content-card','reading-unit'].includes(x),remove(){},toggle(){}};
+  const viewpoint=new Element({sourceIds:'b c',layer:'viewpoint'});viewpoint.tagName='ARTICLE';viewpoint.classList={contains:x=>x==='reading-unit',remove(){},toggle(){}};
+  units.push(cards[0],viewpoint);disclosureCards=[cards[0]];
+  layers.push(...['','deep','viewpoint'].map(layerFilter=>new Element({layerFilter})));
+  const records=[{item:'a',topic:'Design',stars:'5',layer:'deep',search:'alpha practice'},
+   {item:'b',topic:'Ops',stars:'4',layer:'viewpoint',search:'beta idea'},
+   {item:'c',topic:'Design',stars:'5',layer:'viewpoint',search:'gamma explanation'}];
+  rows=[...records,...records].map(record=>new Element(record));
+ }
  const stars=['all','5','4','3','2','1','0'].map(value=>new Element({starFilter:value}));
  stars[0].setAttribute('aria-pressed','true');
  const topics=['','Design','Ops'].map(value=>new Element({topicValue:value,label:value||'全部主题'}));
@@ -23,8 +35,8 @@ function fixture(storageFails=false){
  const headings=[new Element(),new Element()];headings.forEach((h,i)=>{h.nextElementSibling=cards[i];});
  const document=new Element();document.body=new Element();document.documentElement=new Element();
  const tokens={};document.documentElement.style={setProperty(k,v){tokens[k]=v;}};
- document.querySelector=s=>node(s);document.getElementById=id=>id==='note-a'?cards[0]:id==='note-b'?cards[1]:null;
- document.querySelectorAll=s=>({'.content-card':cards,'[data-star-filter]':stars,'.select-option':topics,'[data-view]':tabs,
+ document.querySelector=s=>node(s);document.getElementById=id=>layered?({'unit-deep':units[0],'unit-view':units[1],'note-a':new Element({unitTarget:'unit-deep'}),'note-b':new Element({unitTarget:'unit-view'}),'note-c':new Element({unitTarget:'unit-view'})}[id]||null):id==='note-a'?cards[0]:id==='note-b'?cards[1]:null;
+ document.querySelectorAll=s=>({'.content-card':disclosureCards,'.reading-unit':units,'[data-layer-filter]':layers,'[data-star-filter]':stars,'.select-option':topics,'[data-view]':tabs,
   '[data-color-preset],[data-color-value]':presets,'tr[data-item]':rows,'.group-row':groups,'.topic-label':headings})[s]||[];
  node('#topic-menu').hidden=true;node('#stars-menu').hidden=true;node('#time-table').hidden=true;
  const storage=new Map();const context=vm.createContext({document,window:new Element(),location:{hash:''},
@@ -32,7 +44,7 @@ function fixture(storageFails=false){
   setTimeout:()=>1,clearTimeout(){},requestAnimationFrame:()=>1,cancelAnimationFrame(){},innerHeight:900,
   matchMedia:()=>({matches:false}),console,performance:{now:()=>0}});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'../assets/reader.js'),'utf8'),context);
- return {context,nodes,node,cards,rows,stars,topics,tabs,storage,tokens};
+ return {context,nodes,node,cards,units,layers,rows,stars,topics,tabs,storage,tokens};
 }
 test('search, topic and exact star choices intersect in both maps and cards, and clearing restores them',()=>{
  const f=fixture();f.stars[1].emit('click');assert.equal(f.cards[1].hidden,true);assert.equal(f.rows[1].hidden,true);assert.equal(f.rows[3].hidden,true);
@@ -62,4 +74,26 @@ test('custom bright, dark and saturated themes remain readable and unavailable s
   assert.equal(vm.runInContext("setColor('invalid')",f.context),false);
  }
  const stored=fixture();vm.runInContext("setColor('#008800')",stored.context);assert.equal(stored.storage.get('person-reader.color.v2'),'#008800');
+});
+
+test('aggregate viewpoints follow matching source works while counts remain unique works',()=>{
+ const f=fixture(false,true);assert.equal(f.node('#count').textContent,'3 项作品');
+ f.node('#search').value='gamma';f.node('#search').emit('input');
+ assert.equal(f.units[0].hidden,true);assert.equal(f.units[1].hidden,false);
+ assert.equal(f.node('#count').textContent,'1 项作品');assert.equal(f.rows.filter(row=>!row.hidden).length,2);
+ f.stars[2].emit('click');assert.ok(f.units.every(unit=>unit.hidden));
+ f.node('#reset').emit('click');f.layers[1].emit('click');
+ assert.equal(f.units[0].hidden,false);assert.equal(f.units[1].hidden,true);assert.equal(f.node('#count').textContent,'1 项作品');
+ f.node('#expand-notes').emit('click');assert.equal(f.units[1].open,false);
+ const target=vm.runInContext("openCard('note-c')",f.context);
+ assert.equal(target,f.units[1]);assert.equal(f.units[1].hidden,false);assert.equal(f.node('#count').textContent,'3 项作品');
+ assert.equal(f.units[1].open,false);
+});
+
+test('layer, exact star and topic filters intersect at source level',()=>{
+ const f=fixture(false,true);f.layers[2].emit('click');f.topics[1].emit('click');f.stars[1].emit('click');
+ assert.equal(f.units[0].hidden,true);assert.equal(f.units[1].hidden,false);
+ assert.deepEqual(f.rows.filter(row=>!row.hidden).map(row=>row.dataset.item),['c','c']);
+ assert.equal(f.layers[2].getAttribute('aria-pressed'),'true');
+ f.topics[2].emit('click');assert.ok(f.units.every(unit=>unit.hidden));assert.equal(f.node('#empty').hidden,false);
 });

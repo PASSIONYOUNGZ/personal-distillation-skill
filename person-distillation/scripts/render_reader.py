@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from document_render import render_document
 from content_analysis import sections as analysis_sections, text as analysis_text
+from reading_units import reading_units, methods as reviewed_methods
 
 ASSETS = Path(__file__).resolve().parents[1] / 'assets'
 CSS = (ASSETS / 'reader.css').read_text(encoding='utf-8')
@@ -193,10 +194,20 @@ def source_links(records):
     return ''.join(link(source.get('label', '来源'), source['url']) for source in records if source.get('url'))
 
 
-def rows(items):
+def item_search(item):
+    return ' '.join([item['title'],item.get('summary',''),item.get('what',''),analysis_text(item.get('analysis_sections')),*item.get('learning',[]),*[str(item.get(k,'')) for k in ('use','thinking','directions')]]).lower()
+
+
+def unit_search(unit):
+    return ' '.join([unit['title'],unit['summary'],unit.get('context',''),unit.get('attribution',''),*unit['paragraphs'],analysis_text(unit['analysis_sections'])]).lower()
+
+
+def rows(items, unit_by_item=None):
     output = []
     for item in items:
-        output.append(f'<tr data-item="{esc(item["id"])}"><td class="date-cell">{publication_date(item.get("date"))}</td><td class="title-cell"><span class="title-content">'+link(item.get('short',item['title']),item['sources'][0]['url'],'content-title')+f'&nbsp;<a class="read-link" href="#note-{esc(item["id"])}">内容解读 {icon("arrow",13)}</a></span>'+coverage_note(item, compact=True)+f'</td><td class="summary-cell">{esc(item["summary"])}</td><td class="platform-cell"><div class="platform-links">{sources(item)}</div></td><td class="rating-cell">{rating(item)}</td></tr>')
+        unit=(unit_by_item or {}).get(item['id']);metadata=''
+        if unit:metadata=f' data-topic="{esc(item["topic"])}" data-stars="{stars_value(item) or 0}" data-layer="{unit["kind"]}" data-search="{esc(item_search(item)+" "+unit_search(unit))}"'
+        output.append(f'<tr data-item="{esc(item["id"])}"{metadata}><td class="date-cell">{publication_date(item.get("date"))}</td><td class="title-cell"><span class="title-content">'+link(item.get('short',item['title']),item['sources'][0]['url'],'content-title')+f'&nbsp;<a class="read-link" href="#note-{esc(item["id"])}">内容解读 {icon("arrow",13)}</a></span>'+coverage_note(item, compact=True)+f'</td><td class="summary-cell">{esc(item["summary"])}</td><td class="platform-cell"><div class="platform-links">{sources(item)}</div></td><td class="rating-cell">{rating(item)}</td></tr>')
     return ''.join(output)
 
 
@@ -206,6 +217,97 @@ def table(body, ident, hidden=False):
 
 def transcript_summary(title, action='查看全文'):
     return '<summary><span>'+esc(title)+'</span><span class="transcript-action"><span class="full-closed">'+action+'</span><span class="full-open">收起</span>'+icon('chevron',15)+'</span></summary>'
+
+
+def source_prose(item):
+    chunks=['<div class="prose">']
+    for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
+        if field=='what' and item.get('analysis_sections'):
+            chunks+=['<h5>'+label+'</h5><div class="structured-analysis">']
+            for row in analysis_sections(item['analysis_sections']):
+                chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+            chunks+=['</div>']
+        elif item.get(field):chunks+=['<h5>'+label+'</h5>'+paragraphs(item[field])]
+    if item.get('learning'):chunks+=['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(p)+'</li>' for p in item['learning'])+'</ul>']
+    additional=[v for v in item.get('evidence',[]) if v.get('url') not in {s['url'] for s in item['sources']}]
+    if additional:chunks+=['<div class="evidence">'+''.join(link(v.get('label','补充来源'),v['url']) for v in additional if v.get('url'))+'</div>']
+    return ''.join(chunks)+'</div>'
+
+
+def source_materials(item, base):
+    chunks=[]
+    if item.get('images'):
+        chunks+=['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
+        for pic in item['images']:
+            chunks += [f'<figure><img loading="lazy" data-enlarge src="{image(pic,base)}" alt="{esc(pic["caption"])}"><figcaption>{esc(pic["caption"])}'+(' · '+link('图片来源',pic['url']) if pic.get('url') else '')+'</figcaption></figure>']
+        chunks+=['</div>']
+    if item.get('result'):
+        label='文字稿从哪里来' if any(t.get('type')!='document' for t in item.get('transcripts',[])) else '已查看的材料'
+        chunks+=['<details class="transcript">'+transcript_summary(label,'查看说明')+'<div class="transcript-body">'+paragraphs(item['result'])+'</div></details>']
+    for document in item.get('documents',[]):
+        chunks+=['<details class="transcript source-article">'+transcript_summary(document.get('title','原文'))+'<div class="transcript-body">'+('<p class="transcript-note">'+esc(document['note'])+'</p>' if document.get('note') else '')+'<div class="source-document">'+render_document(document.get('document',document))+'</div></div></details>']
+    for transcript in item.get('transcripts',[]):
+        chunks+=['<details class="transcript">'+transcript_summary(transcript['title'])+'<div class="transcript-body"><p class="transcript-note">'+esc(transcript['note'])+'</p>']
+        if transcript.get('type')=='document':chunks+=['<div class="source-document">'+render_document(transcript['document'])+'</div>']
+        else:chunks+=['<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in transcript['paragraphs']]
+        chunks+=['</div></details>']
+    return ''.join(chunks)
+
+
+def render_unit(unit, by_id, base, opened=False):
+    members=[by_id[ident] for ident in unit['item_ids']]
+    compact=unit['kind']=='viewpoint'
+    attrs=' id="unit-'+esc(unit['id'])+'" data-unit="'+esc(unit['id'])+'" data-source-ids="'+esc(' '.join(unit['item_ids']))+'" data-layer="'+unit['kind']+'"'
+    anchors=''.join('<span class="source-anchor" id="note-'+esc(i['id'])+'" data-unit-target="unit-'+esc(unit['id'])+'"></span>' for i in members)
+    tag='article' if compact else 'details'
+    cover_class=' has-unit-cover' if not compact and len(members)==1 and members[0].get('cover') else ''
+    chunks=['<'+tag+' class="reading-unit '+('viewpoint-card' if compact else 'content-card')+cover_class+'"'+attrs+(' open' if opened and not compact else '')+'>']
+    title='<h'+('3' if compact else '4')+'>'+esc(unit['title'])+'</h'+('3' if compact else '4')+'>'
+    if compact:chunks+=['<div class="viewpoint-heading">'+title+'</div><div class="card-body viewpoint-body">']
+    else:
+        thumb=''
+        if len(members)==1 and members[0].get('cover'):
+            pic=members[0]['cover'];thumb='<img class="unit-cover" loading="lazy" src="'+image(pic,base)+'" alt="'+esc(pic['caption'])+'">'
+        chunks+=['<summary>'+thumb+'<div class="card-heading">'+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side"><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body">']
+    chunks+=[anchors,'<div class="unit-source-links">'+''.join('<span>'+publication_date(i.get('date'))+' '+link(i.get('short') or i['title'],i['sources'][0]['url'])+'</span>' for i in members)+'</div>']
+    if unit.get('_adapted'):
+        chunks+=[source_prose(members[0])]
+    else:
+        chunks+=['<div class="prose unit-prose">']
+        if compact:chunks+=['<p class="viewpoint-summary">'+esc(unit['summary'])+'</p>']
+        for field,label in (('context','背景'),('attribution','归属')):
+            if unit.get(field):chunks+=['<div class="unit-'+field+'"><h5>'+label+'</h5>'+paragraphs(unit[field])+'</div>']
+        if unit['paragraphs']:chunks+=['<div class="unit-explanation"><h5 class="sr-only">正文</h5>'+''.join(paragraphs(p) for p in unit['paragraphs'])+'</div>']
+        for row in unit['analysis_sections']:chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+        chunks+=['</div>']
+    # Original interpretations and full source representations stay reachable;
+    # aggregation never replaces or rewrites the underlying work records.
+    for item in members:
+        extras=source_materials(item,base)
+        if not unit.get('_adapted'):
+            chunks+=['<details class="transcript source-record" data-source-record="'+esc(item['id'])+'">'+transcript_summary(item['title'],'查看原作解读与材料')+'<div class="transcript-body"><div class="sources">'+sources(item)+'</div><p>'+esc(item['summary'])+'</p>'+source_prose(item)+extras+'</div></details>']
+        else:chunks+=[extras]
+        if stars_value(item) is not None and item.get('score_reason'):
+            chunks+=['<p class="recommendation-note"><strong>'+('推荐理由' if len(members)==1 else esc(item.get('short') or item['title'])+' · 推荐理由')+'</strong> · '+esc(item['score_reason'])+'</p>']
+    chunks+=['</div></'+tag+'>']
+    return ''.join(chunks)
+
+
+def render_methods(methods,by_id):
+    labels={'observed':'材料中的做法','self_report':'本人自述','inference':'基于材料的分析','quotation':'引用观点'}
+    chunks=['<div class="method-list">']
+    for method in methods:
+        chunks+=['<article class="method-card" id="method-'+esc(method['id'])+'"><h3>'+esc(method['title'])+'</h3><p class="method-summary">'+esc(method['summary'])+'</p>']
+        if method.get('steps'):
+            chunks+=['<ol class="method-steps">'+''.join('<li><h4>'+esc(step['title'])+'</h4>'+paragraphs(step['text'])+'</li>' for step in method['steps'])+'</ol>']
+        if method.get('boundary'):chunks+=['<div class="method-boundary"><h4>适用条件</h4>'+paragraphs(method['boundary'])+'</div>']
+        if method.get('counterexamples'):chunks+=['<div class="method-counterexamples"><h4>不同情况与反例</h4>'+''.join(paragraphs(p) for p in method['counterexamples'])+'</div>']
+        chunks+=['<ul class="method-evidence">']
+        for entry in method['evidence']:
+            item=by_id[entry['item_id']]
+            chunks+=['<li><span class="evidence-kind">'+labels[entry['kind']]+'</span><a href="#note-'+esc(item['id'])+'">'+esc(item.get('short') or item['title'])+' ↗</a><p>'+esc(entry['note'])+'</p><small>'+esc(entry['locator'])+'</small></li>']
+        chunks+=['</ul></article>']
+    return ''.join(chunks)+'</div>'
 
 
 def project_brand(creator, base, symbol):
@@ -257,6 +359,7 @@ def recent_content(items, base, selected_ids=None):
 
 def render(data, base):
     profile, items = data['profile'], data['items']
+    units=reading_units(data)
     themes = list(dict.fromkeys(i['topic'] for i in items))
     by_id = {i['id']:i for i in items}
     if len(by_id) != len(items):
@@ -265,10 +368,13 @@ def render(data, base):
         raise ValueError('Item ids must be safe HTML anchors')
     for item in items:
         stars_value(item)
+    methods=reviewed_methods(profile,by_id)
+    unit_by_item={ident:unit for unit in units or [] for ident in unit['item_ids']}
     def evidence(ids):
         return ''.join(f'<a href="#note-{esc(i)}">{esc(by_id[i].get("short", by_id[i]["title"]))} ↗</a>' for i in ids)
     chunks = ['<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>'+esc(profile['name'])+' · 个人蒸馏阅读版</title><style>'+CSS+'</style></head><body class="no-script" id="top">']
-    navigation = [('person','认识这个人'),('history','经历时间线'),('mindmap','学习主题导航'),('catalog','内容地图'),('notes','内容解读'),('directions','学习方向')]
+    reading_navigation=[('notes','内容解读')] if units is None else [(key,title) for kind,key,title in [('deep','notes','深度内容解读'),('viewpoint','viewpoints','精选观点')] if any(u['kind']==kind for u in units)]
+    navigation = [('person','认识这个人'),('history','经历时间线'),('mindmap','学习主题导航'),('catalog','内容地图')]+reading_navigation+([('methods','做事逻辑与方法')] if methods else [])+[('directions','学习方向')]
     omitted=set()
     if not profile.get('timeline'):omitted.add('history')
     if not profile.get('topic_navigation'):omitted.add('mindmap')
@@ -369,51 +475,71 @@ def render(data, base):
     if any(stars_value(i) is None for i in items):
         star_filters += '<button class="star-choice" data-star-filter="0" aria-pressed="false"><span>待了解</span><span class="star-check">'+icon('check',15)+'</span></button>'
     chunks += ['<div class="filters-panel"><div class="filters"><div class="search-wrap">'+icon('search',16)+'<label for="search" class="sr-only">搜索内容</label><input id="search" aria-label="搜索内容标题、简介和解读" placeholder="搜索内容…"></div><div class="topic-select"><button class="select-trigger" id="topic-trigger" aria-label="筛选主题" aria-haspopup="listbox" aria-expanded="false" aria-controls="topic-menu"><span id="topic-label">全部主题</span>'+icon('chevron',15)+'</button><div class="select-menu" id="topic-menu" role="listbox" aria-label="主题选项" hidden>'+options+'</div></div><div class="stars-select"><button class="select-trigger" id="stars-trigger" aria-label="筛选推荐星级" aria-expanded="false" aria-controls="stars-menu"><span id="stars-label">全部星级</span>'+icon('chevron',15)+'</button><div class="select-menu star-menu" id="stars-menu" role="group" aria-label="推荐星级，可多选" hidden><div class="star-menu-head"><strong>推荐星级</strong><span>多选</span></div>'+star_filters+'</div></div><div class="view-buttons" role="tablist" aria-label="地图视图"><button data-view="theme" role="tab" aria-selected="true" aria-controls="theme-table" tabindex="0">按主题</button><button data-view="time" role="tab" aria-selected="false" aria-controls="time-table" tabindex="-1">按时间</button></div><div class="filter-foot"><span id="count" aria-live="polite">'+str(len(items))+' 项</span><button class="text-button" id="reset" hidden>清除</button></div></div></div><div class="table-shell">']
-    themed = ''.join('<tr class="group-row" data-tone="'+str(n%4)+'"><td colspan="5"><span class="topic-chip">'+esc(topic_heading(n,t))+'</span></td></tr>'+rows([i for i in items if i['topic']==t]) for n,t in enumerate(themes))
+    if units is not None:
+        # Last filter chunk ends with the table shell; put the new group before it.
+        layer_buttons='<div class="reading-layer-filter" role="group" aria-label="按阅读形式筛选">'+''.join('<button type="button" data-layer-filter="'+value+'" aria-pressed="'+str(not value).lower()+'">'+label+'</button>' for value,label in [('', '全部内容'),('deep','深度解读'),('viewpoint','精选观点')])+'</div>'
+        chunks[-1]=chunks[-1].replace('<div class="table-shell">',layer_buttons+'<div class="table-shell">')
+    themed = ''.join('<tr class="group-row" data-tone="'+str(n%4)+'"><td colspan="5"><span class="topic-chip">'+esc(topic_heading(n,t))+'</span></td></tr>'+rows([i for i in items if i['topic']==t],unit_by_item) for n,t in enumerate(themes))
     chronological = sorted((i for i in items if i.get('date')),key=lambda i:i.get('sort_date') or i['date'],reverse=True)+[i for i in items if not i.get('date')]
-    chunks += [table(themed,'theme-table'),table(rows(chronological),'time-table',True),'<div class="empty" id="empty" hidden>没有找到相关内容<p>换个关键词，或点击“清除”。</p></div></div></section>',heading('notes','内容解读'),
-               '<div class="notes-controls" aria-label="当前筛选结果的解读展开控制"><span>当前筛选结果</span><button type="button" id="expand-notes">展开全部解读 '+icon('chevron',15)+'</button><button type="button" id="collapse-notes">收起全部解读 '+icon('chevron',15)+'</button></div>']
-    first = True
-    for tone, t in enumerate(themes):
-        chunks += ['<h3 class="topic-label" data-tone="'+str(tone%4)+'"><span class="topic-chip">'+esc(topic_heading(tone,t))+'</span></h3>']
-        for item in (i for i in items if i['topic']==t):
-            search_text = ' '.join([item['title'],item.get('summary',''),item.get('what',''),analysis_text(item.get('analysis_sections')),*item.get('learning',[]),*[str(item.get(k,'')) for k in ('use','thinking','directions')]]).lower()
-            thumb = ''
-            if item.get('cover'):
-                thumb = f'<img class="summary-cover{(" contain" if item["cover"].get("fit")=="contain" else "")}" loading="lazy" src="{image(item["cover"],base)}" alt="{esc(item["cover"]["caption"])}">'
-            opened = ' open' if first else ''
-            first = False
-            chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{publication_date(item.get("date"))}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
-            for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
-                if field=='what' and item.get('analysis_sections'):
-                    chunks += ['<h5>'+label+'</h5><div class="structured-analysis">']
-                    for row in analysis_sections(item['analysis_sections']):chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
-                    chunks += ['</div>']
-                elif item.get(field):chunks += ['<h5>'+label+'</h5>'+paragraphs(item[field])]
-            if item.get('learning'):chunks += ['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(x)+'</li>' for x in item['learning'])+'</ul>']
-            additional=[v for v in item.get('evidence',[]) if v.get('url') not in {s['url'] for s in item['sources']}]
-            if additional:chunks += ['<div class="evidence">'+''.join(link(v.get('label','补充来源'),v['url']) for v in additional if v.get('url'))+'</div>']
-            chunks += ['</div>']
-            if item.get('images'):
-                chunks += ['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
-                for pic in item['images']:
-                    chunks += [f'<figure><img loading="lazy" data-enlarge src="{image(pic,base)}" alt="{esc(pic["caption"])}"><figcaption>{esc(pic["caption"])}{(" · "+link("图片来源",pic["url"])) if pic.get("url") else ""}</figcaption></figure>']
+    chunks += [table(themed,'theme-table'),table(rows(chronological,unit_by_item),'time-table',True),'<div class="empty" id="empty" hidden>没有找到相关内容<p>换个关键词，或点击“清除”。</p></div></div></section>']
+    if units is None:
+        chunks += [heading('notes','内容解读'),'<div class="notes-controls" aria-label="当前筛选结果的解读展开控制"><span>当前筛选结果</span><button type="button" id="expand-notes">展开全部解读 '+icon('chevron',15)+'</button><button type="button" id="collapse-notes">收起全部解读 '+icon('chevron',15)+'</button></div>']
+        first = True
+        for tone, t in enumerate(themes):
+            chunks += ['<h3 class="topic-label" data-tone="'+str(tone%4)+'"><span class="topic-chip">'+esc(topic_heading(tone,t))+'</span></h3>']
+            for item in (i for i in items if i['topic']==t):
+                search_text = ' '.join([item['title'],item.get('summary',''),item.get('what',''),analysis_text(item.get('analysis_sections')),*item.get('learning',[]),*[str(item.get(k,'')) for k in ('use','thinking','directions')]]).lower()
+                thumb = ''
+                if item.get('cover'):
+                    thumb = f'<img class="summary-cover{(" contain" if item["cover"].get("fit")=="contain" else "")}" loading="lazy" src="{image(item["cover"],base)}" alt="{esc(item["cover"]["caption"])}">'
+                opened = ' open' if first else ''
+                first = False
+                chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{publication_date(item.get("date"))}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
+                for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
+                    if field=='what' and item.get('analysis_sections'):
+                        chunks += ['<h5>'+label+'</h5><div class="structured-analysis">']
+                        for row in analysis_sections(item['analysis_sections']):chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+                        chunks += ['</div>']
+                    elif item.get(field):chunks += ['<h5>'+label+'</h5>'+paragraphs(item[field])]
+                if item.get('learning'):chunks += ['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(x)+'</li>' for x in item['learning'])+'</ul>']
+                additional=[v for v in item.get('evidence',[]) if v.get('url') not in {s['url'] for s in item['sources']}]
+                if additional:chunks += ['<div class="evidence">'+''.join(link(v.get('label','补充来源'),v['url']) for v in additional if v.get('url'))+'</div>']
                 chunks += ['</div>']
-            if stars_value(item) is not None and item.get('score_reason'):chunks += ['<p class="recommendation-note"><strong>推荐理由</strong> · '+esc(item['score_reason'])+'</p>']
-            if item.get('result'):
-                result_label = '文字稿从哪里来' if any(t.get('type') != 'document' for t in item.get('transcripts',[])) else '已查看的材料'
-                chunks += ['<details class="transcript">'+transcript_summary(result_label,'查看说明')+'<div class="transcript-body"><p class="transcript-note">'+esc(item['result'])+'</p></div></details>']
-            for document in item.get('documents',[]):
-                chunks += ['<details class="transcript source-article">'+transcript_summary(document.get('title','原文'))+'<div class="transcript-body">'+('<p class="transcript-note">'+esc(document['note'])+'</p>' if document.get('note') else '')+'<div class="source-document">'+render_document(document.get('document',document))+'</div></div></details>']
-            for transcript in item.get('transcripts',[]):
-                chunks += ['<details class="transcript">'+transcript_summary(transcript['title'])+'<div class="transcript-body"><p class="transcript-note">'+esc(transcript['note'])+'</p>']
-                if transcript.get('type')=='document':chunks += ['<div class="source-document">'+render_document(transcript['document'])+'</div>']
-                else:
-                    for p in transcript['paragraphs']:
-                        chunks += ['<p class="speech"><time>'+esc(p['time'])+'</time>'+esc(p['text'])+'</p>']
+                if item.get('images'):
+                    chunks += ['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
+                    for pic in item['images']:
+                        chunks += [f'<figure><img loading="lazy" data-enlarge src="{image(pic,base)}" alt="{esc(pic["caption"])}"><figcaption>{esc(pic["caption"])}{(" · "+link("图片来源",pic["url"])) if pic.get("url") else ""}</figcaption></figure>']
+                    chunks += ['</div>']
+                if stars_value(item) is not None and item.get('score_reason'):chunks += ['<p class="recommendation-note"><strong>推荐理由</strong> · '+esc(item['score_reason'])+'</p>']
+                if item.get('result'):
+                    result_label = '文字稿从哪里来' if any(t.get('type') != 'document' for t in item.get('transcripts',[])) else '已查看的材料'
+                    chunks += ['<details class="transcript">'+transcript_summary(result_label,'查看说明')+'<div class="transcript-body"><p class="transcript-note">'+esc(item['result'])+'</p></div></details>']
+                for document in item.get('documents',[]):
+                    chunks += ['<details class="transcript source-article">'+transcript_summary(document.get('title','原文'))+'<div class="transcript-body">'+('<p class="transcript-note">'+esc(document['note'])+'</p>' if document.get('note') else '')+'<div class="source-document">'+render_document(document.get('document',document))+'</div></div></details>']
+                for transcript in item.get('transcripts',[]):
+                    chunks += ['<details class="transcript">'+transcript_summary(transcript['title'])+'<div class="transcript-body"><p class="transcript-note">'+esc(transcript['note'])+'</p>']
+                    if transcript.get('type')=='document':chunks += ['<div class="source-document">'+render_document(transcript['document'])+'</div>']
+                    else:
+                        for p in transcript['paragraphs']:
+                            chunks += ['<p class="speech"><time>'+esc(p['time'])+'</time>'+esc(p['text'])+'</p>']
+                    chunks += ['</div></details>']
                 chunks += ['</div></details>']
-            chunks += ['</div></details>']
-    chunks += ['</section>']
+        chunks += ['</section>']
+    else:
+        # Source-work count belongs to the map. Reading units are a presentation
+        # layer and are not silently counted as additional collected works.
+        first=True
+        for kind,ident,title in [('deep','notes','深度内容解读'),('viewpoint','viewpoints','精选观点')]:
+            group=[unit for unit in units if unit['kind']==kind]
+            if not group:continue
+            chunks += [heading(ident,title)]
+            if kind=='deep':chunks += ['<div class="notes-controls" aria-label="当前筛选结果的解读展开控制"><span>当前筛选结果</span><button type="button" id="expand-notes">展开全部解读 '+icon('chevron',15)+'</button><button type="button" id="collapse-notes">收起全部解读 '+icon('chevron',15)+'</button></div>']
+            for unit in group:
+                chunks += [render_unit(unit,by_id,base,first)]
+                if kind=='deep':first=False
+            chunks += ['<p class="layer-empty" hidden>当前筛选条件下没有'+('深度解读' if kind=='deep' else '精选观点')+'。</p></section>']
+    if methods:
+        chunks += [heading('methods','做事逻辑与方法'),render_methods(methods,by_id),'</section>']
     if profile.get('directions'):
         chunks += [heading('directions','可选的学习方向'),'<div class="directions">']
         for d in profile['directions']:

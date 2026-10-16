@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 import argparse,json,re
 from render_reader import stars_value
+from reading_units import reading_units,methods
 
 def validate(data,base):
     if not isinstance(data,dict):return ['Reader data must be an object']
@@ -16,6 +17,10 @@ def validate(data,base):
     if p.get('intro') is not None and not isinstance(p['intro'],str):errors.append('Invalid optional profile intro')
     ids=[i.get('id') for i in items]
     if len(ids)!=len(set(ids)) or any(not isinstance(i,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',i) for i in ids):errors.append('Invalid/duplicate item IDs')
+    try:
+        reading_units(data)
+        methods(p,ids)
+    except (ValueError,TypeError,KeyError) as exc:errors.append('Reading architecture: '+str(exc))
     def url(value):return isinstance(value,str) and value.startswith(('https://','http://'))
     def pic(v,label,creator=False):
         if not isinstance(v,dict):errors.append('Invalid image '+label);return
@@ -101,7 +106,7 @@ def validate(data,base):
     return errors
 
 class Structure(HTMLParser):
-    def __init__(self):super().__init__();self.ids=[];self.anchors=[];self.remote=[];self.tables={};self.table=None;self.cards=[];self.opened=[];self.speech=[];self.speech_depth=0;self.visible=[];self.hidden_depth=0;self.sections=[];self.person_text=[];self.person_links=set()
+    def __init__(self):super().__init__();self.ids=[];self.anchors=[];self.remote=[];self.tables={};self.table=None;self.cards=[];self.opened=[];self.units=[];self.unit_opened=[];self.source_anchors=[];self.speech=[];self.speech_depth=0;self.visible=[];self.hidden_depth=0;self.sections=[];self.person_text=[];self.person_links=set()
     def handle_starttag(self,tag,attrs):
         a=dict(attrs);ident=a.get('id');cls=a.get('class','').split()
         if tag=='section':self.sections.append(ident)
@@ -112,7 +117,11 @@ class Structure(HTMLParser):
         if tag in ('script','img','link') and (a.get('src') or a.get('href','')).startswith(('http:','https:')):self.remote.append(a)
         if tag=='table':self.table=ident;self.tables.setdefault(ident,[])
         if tag=='tr' and 'data-item' in a:self.tables[self.table].append(a['data-item'])
-        if tag=='details' and 'content-card' in cls:
+        if 'data-unit' in a:
+            self.units.append(a['data-unit'])
+            if 'open' in a:self.unit_opened.append(a['data-unit'])
+        if 'data-unit-target' in a:self.source_anchors.append(ident[5:])
+        if tag=='details' and 'content-card' in cls and 'data-unit' not in a:
             self.cards.append(ident[5:])
             if 'open' in a:self.opened.append(ident[5:])
         if tag=='p' and 'speech' in cls:self.speech.append('');self.speech_depth=1
@@ -129,18 +138,40 @@ class Structure(HTMLParser):
 
 def inspect_html(data,body):
     h=Structure();h.feed(body);errors=[];ids=[i['id'] for i in data['items']]
+    units=reading_units(data)
     if len(h.ids)!=len(set(h.ids)):errors.append('Duplicate HTML IDs')
     if set(h.anchors)-set(h.ids):errors.append('Broken internal anchors')
     if h.remote:errors.append('Remote runtime dependency')
     for table in ('theme-table','time-table'):
         if sorted(h.tables.get(table,[]))!=sorted(ids):errors.append('Map set differs: '+table)
-    if sorted(h.cards)!=sorted(ids) or h.opened!=ids[:1]:errors.append('Card set/default disclosure differs')
-    ordered=[i for topic in dict.fromkeys(i['topic'] for i in data['items']) for i in data['items'] if i['topic']==topic]
+    if units is None:
+        ordered=[i for topic in dict.fromkeys(i['topic'] for i in data['items']) for i in data['items'] if i['topic']==topic]
+        if sorted(h.cards)!=sorted(ids) or h.opened!=[ordered[0]['id']]:errors.append('Card set/default disclosure differs')
+    else:
+        by_id={item['id']:item for item in data['items']}
+        unit_order=[unit for kind in ('deep','viewpoint') for unit in units if unit['kind']==kind]
+        if h.units!=[unit['id'] for unit in unit_order] or sorted(h.source_anchors)!=sorted(ids):errors.append('Reading unit/source anchor set differs')
+        if h.unit_opened!=[unit['id'] for unit in units if unit['kind']=='deep'][:1]:errors.append('Reading unit default disclosure differs')
+        ordered=[by_id[ident] for unit in unit_order for ident in unit['item_ids']]
     expected=[p for i in ordered for t in i.get('transcripts',[]) if t.get('type')!='document' for p in t['paragraphs']]
     compact=lambda s:re.sub(r'\s+','',s)
     if len(expected)!=len(h.speech) or any(compact(a.get('time','')+a['text'])!=compact(b) for a,b in zip(expected,h.speech)):errors.append('Transcript text/order differs')
     visible=compact(''.join(h.visible))
     required_text=[]
+    if units is not None:
+        for unit in units:
+            required_text.extend([unit['title'],unit['summary'],*unit['paragraphs']])
+            required_text.extend(unit.get(field,'') for field in ('context','attribution'))
+            for row in unit['analysis_sections']:required_text.extend([row['title'],*row['paragraphs']])
+        for item in data['items']:
+            if item.get('analysis_sections'):
+                from content_analysis import sections
+                for row in sections(item['analysis_sections']):required_text.extend([row['title'],*row['paragraphs']])
+            elif item.get('what'):required_text.append(item['what'])
+    for method in methods(data.get('profile',{}),ids):
+        required_text.extend([method['title'],method['summary'],method.get('boundary',''),*method.get('counterexamples',[])])
+        for step in method.get('steps',[]):required_text.extend([step['title'],step['text']])
+        for entry in method['evidence']:required_text.extend([entry['locator'],entry['note']])
     person_visible=compact(''.join(h.person_text))
     for entry in data.get('profile',{}).get('biography',[]):
         text=entry if isinstance(entry,str) else entry['text']

@@ -117,6 +117,8 @@ def main():
     with span(a.workspace,'acquisition','video-'+a.command,category={'subtitle':'subtitle','extract':'other','whisper':'asr','sense':'asr'}.get(a.command,'other'),kind='phase' if a.command=='whisper-batch' else 'tool') as traced:
         result=execute(a)
         if result.get('success') is False:traced['status']='partial'
+        if a.command in ('whisper','sense') and isinstance(result.get('duration'),(int,float)):
+            traced['metrics']={'items':1,'media_seconds':result['duration']}
     if result.get('success') is False:raise SystemExit(1)
 
 if __name__=='__main__':main()

@@ -1,8 +1,10 @@
 document.body.classList.remove('no-script');
 const search=document.querySelector('#search'),reset=document.querySelector('#reset');
 const cards=[...document.querySelectorAll('.content-card')];
+const readingUnits=[...document.querySelectorAll('.reading-unit')];
+const layerButtons=[...document.querySelectorAll('[data-layer-filter]')];
 const starButtons=[...document.querySelectorAll('[data-star-filter]')],selectedStars=new Set();
-let selectedTopic='';
+let selectedTopic='',selectedLayer='';
 const expandNotes=document.querySelector('#expand-notes'),collapseNotes=document.querySelector('#collapse-notes');
 function updateDisclosureControls(){
  const visible=cards.filter(card=>!card.hidden);
@@ -15,16 +17,26 @@ collapseNotes?.addEventListener('click',()=>discloseVisible(false));
 document.addEventListener('toggle',event=>{if(event.target.classList.contains('content-card'))updateDisclosureControls();},true);
 function filter(){
  const query=search.value.trim().toLowerCase();let count=0;
- cards.forEach(card=>{const match=(!query||card.dataset.search.includes(query))&&(!selectedTopic||card.dataset.topic===selectedTopic)&&(!selectedStars.size||selectedStars.has(card.dataset.stars));card.hidden=!match;if(match)count++;});
- document.querySelectorAll('tr[data-item]').forEach(row=>row.hidden=document.getElementById('note-'+row.dataset.item).hidden);
+ if(readingUnits.length){
+  const matching=new Set();
+  document.querySelectorAll('tr[data-item]').forEach(row=>{const d=row.dataset,match=(!query||d.search.includes(query))&&(!selectedTopic||d.topic===selectedTopic)&&(!selectedStars.size||selectedStars.has(d.stars))&&(!selectedLayer||d.layer===selectedLayer);row.hidden=!match;if(match)matching.add(d.item);});
+  readingUnits.forEach(unit=>unit.hidden=!unit.dataset.sourceIds.split(' ').some(id=>matching.has(id)));
+  count=matching.size;
+  document.querySelectorAll('.layer-empty').forEach(note=>note.hidden=[...note.parentElement.querySelectorAll('.reading-unit')].some(unit=>!unit.hidden));
+ }else{
+  cards.forEach(card=>{const match=(!query||card.dataset.search.includes(query))&&(!selectedTopic||card.dataset.topic===selectedTopic)&&(!selectedStars.size||selectedStars.has(card.dataset.stars));card.hidden=!match;if(match)count++;});
+  document.querySelectorAll('tr[data-item]').forEach(row=>row.hidden=document.getElementById('note-'+row.dataset.item).hidden);
+ }
  document.querySelectorAll('.group-row').forEach(row=>{let next=row.nextElementSibling,visible=false;while(next&&!next.classList.contains('group-row')){if(!next.hidden)visible=true;next=next.nextElementSibling;}row.hidden=!visible;});
  document.querySelectorAll('.topic-label').forEach(h=>{let next=h.nextElementSibling,visible=false;while(next&&next.classList.contains('content-card')){if(!next.hidden)visible=true;next=next.nextElementSibling;}h.hidden=!visible;});
  starButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.starFilter==='all'?!selectedStars.size:selectedStars.has(b.dataset.starFilter))));
- document.querySelector('#count').textContent=count+' 项';
- const starNames={'5':'五星','4':'四星','3':'三星','2':'二星','1':'一星','0':'待了解'};const labels=[...selectedStars].sort((a,b)=>Number(b)-Number(a)).map(x=>starNames[x]);const starLabel=document.querySelector('#stars-label');starLabel.textContent=!labels.length?'全部星级':labels.length<=2?labels.join(' · '):'已选 '+labels.length+' 种星级';document.querySelector('#stars-trigger').title=labels.join('、')||'全部星级';document.querySelector('#empty').hidden=count>0;reset.hidden=!query&&!selectedTopic&&!selectedStars.size;
+ document.querySelector('#count').textContent=count+(readingUnits.length?' 项作品':' 项');
+ const starNames={'5':'五星','4':'四星','3':'三星','2':'二星','1':'一星','0':'待了解'};const labels=[...selectedStars].sort((a,b)=>Number(b)-Number(a)).map(x=>starNames[x]);const starLabel=document.querySelector('#stars-label');starLabel.textContent=!labels.length?'全部星级':labels.length<=2?labels.join(' · '):'已选 '+labels.length+' 种星级';document.querySelector('#stars-trigger').title=labels.join('、')||'全部星级';document.querySelector('#empty').hidden=count>0;reset.hidden=!query&&!selectedTopic&&!selectedStars.size&&!selectedLayer;
+ layerButtons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.layerFilter===selectedLayer)));
  updateDisclosureControls();
 }
 search.addEventListener('input',filter);
+layerButtons.forEach(button=>button.addEventListener('click',()=>{selectedLayer=button.dataset.layerFilter;filter();queueFlow();}));
 starButtons.forEach(button=>button.addEventListener('click',()=>{const value=button.dataset.starFilter;if(value==='all')selectedStars.clear();else if(selectedStars.has(value))selectedStars.delete(value);else selectedStars.add(value);filter();}));
 const topicBox=document.querySelector('.topic-select'),topicButton=document.querySelector('#topic-trigger'),topicMenu=document.querySelector('#topic-menu'),topicLabel=document.querySelector('#topic-label'),topicOptions=[...document.querySelectorAll('.select-option')];
 function closeTopic(returnFocus=false){topicMenu.hidden=true;topicButton.setAttribute('aria-expanded','false');if(returnFocus)topicButton.focus();}
@@ -45,12 +57,12 @@ starButtons.forEach((b,i)=>b.addEventListener('keydown',e=>{let next;if(e.key===
 document.addEventListener('click',e=>{if(!starsBox.contains(e.target))closeStars();});
 document.addEventListener('focusin',e=>{if(!starsBox.contains(e.target))closeStars();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!starsMenu.hidden)closeStars(true);});
-function clearFilters(){search.value='';selectedStars.clear();selectedTopic='';topicLabel.textContent='全部主题';topicOptions.forEach(x=>x.setAttribute('aria-selected',String(x.dataset.topicValue==='')));closeTopic();closeStars();filter();}
+function clearFilters(){search.value='';selectedStars.clear();selectedTopic='';selectedLayer='';topicLabel.textContent='全部主题';topicOptions.forEach(x=>x.setAttribute('aria-selected',String(x.dataset.topicValue==='')));closeTopic();closeStars();filter();}
 reset.addEventListener('click',clearFilters);
 const tabs=[...document.querySelectorAll('[data-view]')];
 function setView(button){tabs.forEach(b=>{b.setAttribute('aria-selected',String(b===button));b.tabIndex=b===button?0:-1;});document.querySelector('#theme-table').hidden=button.dataset.view!=='theme';document.querySelector('#time-table').hidden=button.dataset.view!=='time';queueFlow();}
 tabs.forEach((button,index)=>{button.addEventListener('click',()=>setView(button));button.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?tabs[0]:e.key==='End'?tabs[tabs.length-1]:tabs[(index+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];setView(next);next.focus();}});});
-function openCard(id){const card=document.getElementById(id);if(card?.classList.contains('content-card')){if(card.hidden)clearFilters();card.open=true;return card;}}
+function openCard(id){let card=document.getElementById(id);if(card?.dataset.unitTarget)card=document.getElementById(card.dataset.unitTarget);if(card?.classList.contains('content-card')||card?.classList.contains('reading-unit')){if(card.hidden)clearFilters();if(card.tagName!=='ARTICLE')card.open=true;return card;}}
 function openHash(){let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}const card=openCard(id);if(card)card.scrollIntoView({block:'start'});}
 window.addEventListener('hashchange',openHash);openHash();document.querySelectorAll('a[href^="#note-"]').forEach(a=>a.addEventListener('click',()=>openCard(a.hash.slice(1))));
 const colorButtons=[...document.querySelectorAll('[data-color-preset],[data-color-value]')];

@@ -4,6 +4,19 @@
 
 “近期一些”“有价值的代表内容”已有范围意图。Agent快速作有界解释并说明，例如按更新密度取近期最多若干项；记录original_request、agent_interpretation、sample_budget、selection_basis、stop_condition。不固定所有人物20项或几个月，也不要求整数问卷。完全没范围才补问。不用代表集合冒充最新N。
 
+新请求使用schema_version=4。未强调严格最近、而是希望均衡了解一个人的请求，按已有数量／时间意图解释为有界representative；如“均衡蒸馏30项”保存sample_budget=30，停止条件说明达到预算或已核相关材料耗尽。不能把“最近30项”改成代表集合，也不能因为有偏好就在原时间区间外找较早作品补齐。没有任何数量、时间或有界代表意图仍只补问范围。
+
+## 形式偏好与阅读层分开
+
+scope.content_preferences接受prefer_kinds、only_kinds和balance。形式为article、video、project、product、post、interview，request_scope.normalize_kind统一归一已有常见别名；未知不能猜成短帖或文章。候选的kind据实际入口和正文登记，不靠字数、标题长度、封面好看程度判断质量。它与reading_layer=deep/viewpoint独立：复杂短串也可能需要深度解读，视频也可能只提供一个观点。
+
+- prefer_kinds是软偏好；“多看长文／产品／视频”在代表集合内影响选样，在严格最近集合内只影响执行与阅读安排，不能挤掉更近的合格作品。
+- only_kinds是明确排除其他形式的硬边界；例如“只看视频和访谈”。已核形式不符的条目可在初筛前跳过，不将它打成低星。形式未知的边界候选仍待核，不能偷偷漏掉；scope-review.kind_filter_evidence记录分类依据，连续目录、同日边界和同版核对仍须完成。
+- balance=balanced/depth/viewpoints表达阅读侧重，默认balanced；不强制人人都有产品、项目或固定比例。材料不足时展示实际可支持的结果，不用低价值内容或虚构作品凑配额。视频偏好可简短说明字幕／音画核对可能更耗时，仍按当前最快且足够的路线执行，不再要求工具问卷。
+- scope.viewpoint_limit可选，表示最终精选观点阅读单元的数量上限，允许0；它不是post来源数，不改变source作品范围。多帖聚合一个观点，仍保留各来源的独立计数。若限制与必须交付的独立内容冲突，按实际内容重新组织深读／观点单元，不能强行合并不同判断或省略已承诺来源。
+
+原话与规范化解释同存request；无需为了偏好再问一轮。仅自然语言无法调和的真实范围冲突需要澄清。用户偏好变动走amend保留旧请求，不静默重写已经交付的集合。
+
 ## 计数与日期
 
 默认跨平台已核同版去重总作品数；同题只关联，不凭同题合并文章/不同视频/修订版。同版跨日分发保留所有时间，默认按作品版本最早已核发布时间排序（sort_date/date_basis）；原作实质增订另版。用户按发布条目计数则count_basis=publication，每发布项独立。置顶、纯转发和无判断互动不自动算原创。
@@ -23,10 +36,12 @@
 mode=count/time/count_in_time/all/representative/provided；all只用于明确全部。provided用于用户提供的材料集合，collection_basis说明集合/清单；有限导入不能证明全网最新N。representative需原话及有界解释，不走最新全目录完成逻辑。
 
 ```json
-{"schema_version":3,"original_request":"蒸馏林示例最近一些有代表性的内容","person":{"name":"林示例","seed_urls":[]},"scope":{"mode":"representative","sample_budget":12,"minimum_stars":3,"agent_interpretation":"近期有界代表集合","selection_basis":"主题、变化与反例","stop_condition":"达到样本预算或相关材料耗尽","unit":"total","order":"representative","platforms":[],"timezone":"使用者实际时区"}}
+{"schema_version":4,"original_request":"均衡蒸馏林示例近期一些有代表性的内容，多看长文和项目","person":{"name":"林示例","seed_urls":[]},"scope":{"mode":"representative","sample_budget":12,"minimum_stars":3,"agent_interpretation":"近期有界代表集合，最多12项独立作品","selection_basis":"实质内容、主题变化、反例及偏好的文章和项目","stop_condition":"达到样本预算或已核相关材料耗尽；受限记缺口","content_preferences":{"prefer_kinds":["article","project"],"only_kinds":[],"balance":"balanced"},"unit":"total","order":"representative","platforms":[],"timezone":"使用者实际时区"}}
 ```
 
 脚本校结构，不自动猜自然语言。init保存固定as_of；精确数量不被擅改成样本。request变更用distill.py amend --request <新请求> --revision-evidence <用户修改依据>，旧请求存request-history，成功稿/会话不删除；范围回执重核，相关画像/集合重审。不同人物用新目录或明确身份依据，不能偷套旧准备。
+
+schema2／3旧任务保持原计数、默认值和接续行为，不自动切换均衡选样。新偏好需明确amend为schema4。content_screening.py --workspace <任务目录> --suggest可根据已经读过并登记星级的候选给出provisional建议和原因：代表集合兼顾偏好、已登记的阅读层与形式变化，严格latest保留时间优先。它不打分、不获取材料、不改selection.json；pending、同日先后疑问和数量不足按实返回，建议本身不证明目录覆盖或蒸馏完成。完整范围仍由source-ledger、scope-review、实际内容审校共同核实。
 
 ## 用户已提供材料的请求
 

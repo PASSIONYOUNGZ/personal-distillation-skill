@@ -9,6 +9,8 @@ def audit(request, selected, selection, ledger, review):
     gaps=check_selection(request,selected,selection.get('by_platform'))
     if scope.get('minimum_stars',1)>1 and not review.get('screening_evidence'):
         gaps.append('Filtered latest selection requires screening evidence across the candidate frontier')
+    if scope.get('content_preferences',{}).get('only_kinds') and not review.get('kind_filter_evidence'):
+        gaps.append('Content-form restriction needs reviewed candidate kinds; unknown kinds cannot be omitted')
     if not ledger.get('discovery_reviewed') or not ledger.get('discovery_evidence'):
         gaps.append('Source discovery/material provenance has not been reviewed')
     all_sources=ledger.get('sources',[])

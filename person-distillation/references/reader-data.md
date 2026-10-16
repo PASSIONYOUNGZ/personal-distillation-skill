@@ -4,7 +4,7 @@
 
 ## 文件接口
 
-- config.json保存人物、范围、输出和工具；creator_file显式引用可选署名JSON，构建时导入本任务快照及头像。没有署名配置就用通用品牌，不额外问卷。
+- config.json保存人物、范围、输出和工具；creator_file显式引用可选署名JSON，构建时导入本任务快照及头像。没有私有署名配置就用包内已授权的项目开发者公开署名，不额外问卷。
 - .distill/catalog.json为候选目录；selection.json的items为入选ID数组。发现不等于加入交付。
 - .distill/cards.json是每个入选项的审阅卡片：item_id/summary/what/use/workflow/thinking/limits/directions/evidence/level，补learning字符串数组。正文文本可用字符串或有序字符串段落数组，由统一适配转为规范字符串；learning始终转为字符串数组，详见[data-and-batch](data-and-batch.md)。此兼容只在底稿构建时处理，直接reader-data仍用下面的规范字段。
 - .distill/profile.json为下面的profile对象。biography承载整体人物背景，引用选集外来源也可以；items引用有效作品ID。directions是末尾学习建议，不生成前置“值得学”或默认关系树。数量取决于证据，不凑四特点或五经历。
@@ -12,7 +12,43 @@
 
 ## 阅读器字段
 
-顶层profile/items，可选creator。output/reader-data.json图片路径相对该文件，不依赖原作者电脑。
+顶层profile/items，可选creator与reading_units。output/reader-data.json图片路径相对该文件，不依赖原作者电脑。
+
+## 来源作品、阅读单元与方法
+
+`items`始终保存实际入选的来源作品及完整单篇审阅数据，地图和范围数量以它计数。阅读层是另一个维度，不从字数、视频格式、平台或星级自动推断。新任务在理解后明确填写每项的`reading_layer: "deep" | "viewpoint"`，或用下面的`reading_units`组织。同一有用短帖可以是一个精选观点；完整论证、操作过程或作品复盘可以是深度解读。多条同义观点合并成一个阅读单元，不增加作品数量；原稿、来源和单篇审阅仍保留。
+
+可选`.distill/reading-units.json`为单元对象数组，构建为顶层`reading_units`。每个入选作品必须恰好属于一个单元，不能漏项、重复分配或引用未入选ID；不接受未知/重复单元ID。字段如下：
+
+```json
+[{"id":"a-stable-unit","kind":"viewpoint","item_ids":["source-a","source-b"],
+  "title":"具体观点","topic":"实际主题","summary":"简要交代这个观点。",
+  "context":"必要问题背景；无独立信息时省略。",
+  "attribution":"引用别人的观点时说明归属；不是把引用者当原作者。",
+  "paragraphs":["完整解释观点的含义、理由或实际例子。"],
+  "analysis_sections":[{"title":"材料支持的具体小节","paragraphs":["有信息的解释；不凑模块。"]}]}]
+```
+
+id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/summary非空；paragraphs和analysis_sections至少一个有实际解释。小节标题按原作内容组织，背景/归属/小节不强制全部填写。显式单元正文另做语义审阅与来源要点映射，不能凭通过结构校验就称内容质量足够。旧数据没有units和reading_layer时原样走旧“内容解读”路径；一旦选择逐项reading_layer适配，所有已选作品都须明确分层，不能让缺字段项目被猜测或静默消失。显式units为权威阅读组织，仍保留item中的原始字段与扩展审阅信息。
+
+显式单元展示顺序为“深度内容解读→精选观点”。深读使用可展开卡片；观点用紧凑段落列表，不把短论点拉成长篇空卡或机械教程。聚合单元按原样保留引用的全部item_ids；每篇已审正文和原始材料在单元下折叠可查。单篇显式layer适配直接显示已有审阅正文，避免重复一份相同正文。原有`#note-作品ID`锚点保持可用；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
+
+主题、精确星级、关键词与阅读层筛选取交集，以来源作品为基准；任一来源命中时展示所属聚合单元，保留单元的完整上下文。地图计数明确为“项作品”，不把命中的作品数说成观点数。作品主题和单元主题可不同，筛选仍按地图对应的作品主题执行。`scope.viewpoint_limit`在构建时按实际viewpoint单元数量校验，超限必须人工组织/调整，不自动截掉来源作品。
+
+`profile.methods`可选数组承载“做事逻辑与方法”：
+
+```json
+[{"id":"specific-practice","title":"有依据的具体做法","summary":"解释其工作逻辑。",
+  "steps":[{"title":"具体动作或判断","text":"动作、取舍与反馈如何联系。"}],
+  "evidence":[{"item_id":"source-a","locator":"原材料段落/时间戳/已审小节",
+    "note":"该材料具体支持什么。","kind":"observed"}],
+  "boundary":"适用条件、合作条件或推断边界。",
+  "counterexamples":["已发现的不同情况；没有材料就不凑。"]}]
+```
+
+每个方法必须有非空证据，item_id必须有效，locator/note必须可读，kind仅observed（材料中的做法）、self_report（本人自述）、inference（基于材料的分析）、quotation（引用观点）。方法id唯一；steps、boundary、counterexamples按实际信息选择，不是强制五格模板。不能把一次做法升级为长期习惯、把引用升级为原创、把合作作品归给一个人。方法展示在精选观点之后、学习方向之前；directions回答读者可以怎样借鉴，避免重复方法正文。无材料模块不生成占位，侧栏编号连续。
+
+这些字段是结构合同，事实与理解仍由Agent对原材料审阅；`validate_reader`不能判断一个推断是否成立。构建和校验保留扩展字段，不用适配器改写作者材料，也不会覆盖旧文件中的用户修改。
 
 | profile字段 | 含义 |
 | --- | --- |

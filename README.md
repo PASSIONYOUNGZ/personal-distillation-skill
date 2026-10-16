@@ -2,7 +2,7 @@
 
 # Personal Distillation Skill
 
-当前版本 **2026.10.16.3** · [下载 Skill ZIP](dist/person-distillation-2026.10.16.3.zip) · [更新说明](CHANGELOG.md)
+当前版本 **2026.10.16.4** · [下载 Skill ZIP](dist/person-distillation-2026.10.16.4.zip) · [更新说明](CHANGELOG.md)
 
 **Learn from people. Build your own practice.**
 
@@ -16,7 +16,7 @@ An agent skill for learning from a person's public work: research their backgrou
 
 > 请从 https://github.com/PASSIONYOUNGZ/personal-distillation-skill 安装 Personal Distillation Skill，先阅读 AGENT_INSTALL.md，在当前 Agent 支持的技能目录中完成安装、部署和自检，按需准备依赖，最后报告可用能力及仍需人工连接的事项。
 
-不需要先填写工具、模型、署名或学习目标。安装完成后，告诉 Agent **蒸馏谁，以及最近多少项或什么时间范围** 即可。
+不需要先填写工具、模型、署名或学习目标。安装完成后，告诉 Agent **蒸馏谁，以及多少项、什么时间范围或有界代表集合** 即可。
 
 ```text
 使用 $person-distillation，蒸馏你想学习的人最近30项公开内容，保存到新的独立目录。
@@ -28,10 +28,27 @@ An agent skill for learning from a person's public work: research their backgrou
 
 - **认识这个人**：有依据的人物介绍与整体经历时间线，背景不被作品数量窗口截断。
 - **内容地图**：主题与时间两种视图，支持关键词、主题与推荐星级交集筛选。
-- **逐项解读**：讲清具体问题、做法、判断、例子及适用条件；短帖不硬凑方法。
+- **深度内容解读**：按实际问题、选择、过程、例子和结果解释复杂作品。
+- **精选观点**：简短有价值的表达紧凑呈现，近义材料可聚合，保留引用归属和判断变化。
+- **做事逻辑与方法**：跨作品梳理判断、行动与反馈，每条方法可追溯来源和适用条件。
 - **原文与证据**：保留来源链接、完整原文、图片和视频字幕；原稿、证据校正与待核项分别记录。
 - **可选学习方向**：从本轮内容出发，给出可以迁移到自己实践中的方向。
 - **独立阅读文件**：内嵌 CSS、JavaScript 与可用图片的单文件 HTML，支持配色、展开与阅读导航。
+
+## 按你的偏好使用
+
+主线是：**他是谁 → 做过什么、表达过什么 → 如何判断和做事 → 我能怎样借鉴。**
+
+```text
+使用 $person-distillation，蒸馏某人的30项代表性公开内容。
+使用 $person-distillation，蒸馏某人最近30项公开内容。
+使用 $person-distillation，蒸馏某人最近三个月的内容，偏重长文和项目。
+使用 $person-distillation，研究某人的5个产品案例。
+使用 $person-distillation，整理某人最近20项有价值的短帖，相近观点合并。
+使用 $person-distillation，研究某人的10条代表视频。
+```
+
+代表性学习可兼顾实践与观点；明确“最近N项”仍按时间选合格作品，不因偏好换成较早作品。作品数和聚合观点数分开，10—20条观点是阅读参考，不是固定配额。视频可能需要字幕、音轨和关键画面处理，耗时随材料及环境变化。更多例子见[使用示例](person-distillation/references/usage-examples.md)。
 
 ## 它如何研究
 
@@ -83,3 +100,9 @@ Node 仅用于维护时的交互回归，普通使用不要求。结构测试不
 ## 耗时诊断
 
 研究默认在任务内记录阶段、批次与工具实际起止，区分安装、获取、字幕、模型加载、ASR、阅读写作及人工等待。verify生成JSON、Markdown和CSV报告，列出重试/缓存、并行重叠、未结束窗口和未定位空档。所有记录保存在本地，没有远程遥测；不采集原稿、Cookie、签名URL或命令参数。详见[本地耗时埋点](person-distillation/references/performance-tracing.md)。阶段窗口不是模型纯计算，脚本计时也不等于整轮耗时；本版没有承诺固定完成时间或已实测加速倍数。
+
+## 效率与长期接续
+
+任务资料与受管理依赖/模型分离，后续任务先核现有环境再复用，避免每个目录重装。独立获取可小批交错，字幕和已审材料优先复用；修改证据只使相关解释及方法过期，不能用缓存跳过必要核读。来源、阅读单元与方法分别存储，旧schema 2/3保持兼容。
+
+接续时指定旧任务目录或本地资料库。集合索引比较稳定人物身份、作品版本与内容哈希，区分新作品、变化证据、不同解释和冲突；不按同名/标题盲合并，也不推断用户已经学会。多HTML自动合并留待后续版本。详见[长期接续](person-distillation/references/continuity.md)。

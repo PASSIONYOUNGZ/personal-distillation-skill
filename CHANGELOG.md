@@ -1,5 +1,16 @@
 # Updates
 
+## 2026.10.16.4
+
+- Separate source works, deep/viewpoint reading units and grounded cross-work methods. Preserve unique work counts, source anchors, original material and legacy readers; filter maps and reading units together.
+- Add schema 4 content preferences and bounded representative selection. Explicit latest-N remains chronological; short valuable posts remain eligible and unknown items are not automatically discarded.
+- Bind quality reviews to sources, reading units, methods and the active review contract. Changed evidence, images, corrections or contract upgrades invalidate affected reviews. Empty record templates cannot approve content.
+- Reuse host-managed media/ASR runtimes by dependency contract with process locks, atomic receipts, cache validation and local timing. Optional image review installs Pillow only when needed. No measured end-to-end speedup is claimed.
+- Add immutable local collection snapshots and explicit-library comparison; distinguish identity, versions, evidence and interpretation. No automatic HTML merge or background service.
+- Keep layered Markdown readable with source material retained, and add ordinary usage examples. Preserve existing short dates, laptop table layout, same-thread source display and public project credit.
+- 180 Python tests and 6 reader.js logic tests pass in source and extracted ZIP. Independent non-AI provided-set trial and actual 30-work adaptation inspected. New online/platform, real media install and multi-viewport browser runs were not performed.
+
+
 ## 2026.10.16.3
 
 - Render publication days as YYYY-MM-DD in both maps, recent selections and reading cards; retain full timestamps/timezones in data and semantic time attributes.

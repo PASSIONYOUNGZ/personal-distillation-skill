@@ -4,14 +4,19 @@ Python standard library only; source files, analysis and rendering are separate.
 """
 from pathlib import Path
 from collections import Counter
-import argparse,copy,hashlib,html,importlib.util,json,math,re,shutil,sys,time
+import argparse,copy,hashlib,html,importlib.util,json,math,os,re,shutil,sys,tempfile,time
 from request_scope import normalize,check_selection,fix_observation_time,publication_value
 from preparation_gate import require as require_preparation,passed as preparation_passed
 
 def read(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
 def write(path,value):
     path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
-    path.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    fd,name=tempfile.mkstemp(prefix='.'+path.name+'-',dir=path.parent)
+    try:
+        with os.fdopen(fd,'w',encoding='utf-8') as f:
+            f.write(json.dumps(value,ensure_ascii=False,indent=2)+'\n');f.flush();os.fsync(f.fileno())
+        os.replace(name,path)
+    finally:Path(name).unlink(missing_ok=True)
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def key(value):
     if not re.fullmatch(r'[\w.-]+',value) or value in ('.','..'):raise ValueError('Unsafe item ID')
@@ -283,7 +288,8 @@ def render(w):
     # The map and HTML must use the same reviewed card text rather than keeping
     # the older catalog summaries after an editor has improved the cards.
     reader_data=None
-    if 'html' in config['output'].get('formats',['html']):
+    profile=read(data(w,'profile.json')) if data(w,'profile.json').is_file() else {}
+    if 'html' in config['output'].get('formats',['html']) or data(w,'reading-units.json').is_file() or any('reading_layer' in c for c in cards) or profile.get('methods'):
         from build_reader import build
         reader_data=build(w);items=reader_data['items']
     else:
@@ -296,9 +302,19 @@ def render(w):
     report=['# '+config['person']['name']+' · 个人蒸馏','']
     for filename in ('background.md','portrait.md'):
         if (w/'notes'/filename).exists():report += [(w/'notes'/filename).read_text(encoding='utf-8'),'']
-    report += ['## 内容研读','']
+    from markdown_reading import parts as reading_markdown,archive_parts,material_parts,correction_parts
+    layered=reading_markdown(reader_data,link) if reader_data else []
+    report+=layered
+    if layered and (w/'notes/directions.md').exists():report += [(w/'notes/directions.md').read_text(encoding='utf-8'),'']
+    report += ['## '+('来源与完整原稿' if layered else '内容研读'),'']
+    corrections={}
+    if reader_data:
+        from evidence_review import correction
+        for item in items:
+            if data(w,'corrected/'+item['id']+'.json').is_file():corrections[item['id']]=correction(w,item['id'])
+    if layered:report+=archive_parts(reader_data,link,cards,corrections)
     by_id={x['id']:x for x in items}
-    for card in cards:
+    for card in ([] if layered else cards):
         item=by_id[card['item_id']];packet_file=data(w,'packets/'+item['id']+'.json')
         report += ['### '+item['title'],'',link('原作',item['sources'][0]['url'])+' · '+card.get('level','简单解析'),'']
         for field,label in [('what','内容'),('use','有什么用'),('workflow','做法'),('thinking','判断与思路'),('limits','适用条件与局限'),('directions','可选学习方向')]:
@@ -306,9 +322,20 @@ def render(w):
                 for part in card['analysis_sections']:report+=['#### '+part['title'],'','\n\n'.join(part['paragraphs']),'']
             elif card.get(field):report += ['**'+label+'。** '+card[field],'']
         if card.get('evidence'):report += ['依据：'+'、'.join(link(x.get('label','来源'),x['url']) for x in card['evidence']),'']
+        if reader_data:
+            report+=material_parts(item)+correction_parts(corrections.get(item['id']),link)
+            continue
         if not packet_file.exists():continue
         packet=read(packet_file)
-        if packet.get('status')!='ready' or packet.get('main',{}).get('role')!='transcript':continue
+        if packet.get('status')!='ready':continue
+        if packet.get('main',{}).get('role') in ('article','project'):
+            main=packet['main']
+            if main.get('reader_display')!='source_link_only':
+                # Legacy Markdown-only tasks may have no reader bridge/profile.
+                document=read(local(w,main['file'])) if main['format']=='document' else {'format':'markdown' if main['format']=='markdown' else 'text','text':'\n'.join(segment['text'] for segment in packet['segments'])}
+                report+=material_parts({'documents':[{'type':'document','title':'原文全文','document':document}]})
+            continue
+        if packet.get('main',{}).get('role')!='transcript':continue
         main=packet['main'];report += ['#### 逐字稿原稿','', '解析来源：'+main['platform']+' · '+link('对应视频',main['url'])+'；'+main.get('method','原始字幕／转写')+'。','']
         report += transcript_paragraphs(packet['segments'])
         corrected=data(w,'corrected/'+item['id']+'.json')
@@ -320,9 +347,10 @@ def render(w):
             report += [table(changes),'']
             report += transcript_paragraphs(fixed['segments'])
             if fixed['pending']:report += ['待核：'+'；'.join(x['text']+'（'+x['reason']+'）' for x in fixed['pending']),'']
-    if (w/'notes/directions.md').exists():report += [(w/'notes/directions.md').read_text(encoding='utf-8'),'']
+    if not layered and (w/'notes/directions.md').exists():report += [(w/'notes/directions.md').read_text(encoding='utf-8'),'']
     report='\n'.join(report)
     outputs={'人物蒸馏.md':report,'内容地图_按主题.md':'\n'.join(topic),'内容地图_按时间.md':timeline}
+    if reader_data:outputs['reader-data.json']=json.dumps(reader_data,ensure_ascii=False,indent=2)+'\n'
     if 'html' in config['output'].get('formats',['html']):
         from render_reader import render as render_html
         from validate_reader import validate,inspect_html

@@ -49,7 +49,7 @@ class AcquisitionTests(unittest.TestCase):
             self.assertFalse(env['tools'])
             found,_=preflight.tools(env,[])
             self.assertTrue(all(v['status']=='not_installed' for v in found.values()))
-            spec=bootstrap.plan(w)
+            spec=bootstrap.plan(w,runtime_dir=w/'runtime')
             self.assertFalse(Path(spec['base']).exists())
             self.assertIsNone(spec['model_repo'])
             self.assertFalse(spec['changes_system_python'])
@@ -66,14 +66,14 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_bootstrap_preserves_unowned_directory(self):
         with test_workspace() as w:
-            spec=bootstrap.plan(w);base=Path(spec['base']);base.mkdir(parents=True)
+            spec=bootstrap.plan(w,runtime_dir=w/'runtime');base=Path(spec['base']);base.mkdir(parents=True)
             (base/'user.txt').write_text('user data',encoding='utf-8')
             with self.assertRaises(ValueError):bootstrap.install(spec)
             self.assertEqual((base/'user.txt').read_text(encoding='utf-8'),'user data')
 
     def test_bootstrap_failure_receipt(self):
         with test_workspace() as w, patch('bootstrap.subprocess.run',side_effect=OSError('synthetic network/installer failure')):
-            with self.assertRaises(OSError):bootstrap.install(bootstrap.plan(w))
+            with self.assertRaises(OSError):bootstrap.install(bootstrap.plan(w,runtime_dir=w/'runtime'))
             receipt=distill.read(w/'.distill/bootstrap.json')
             self.assertEqual(receipt['status'],'failed')
             self.assertFalse((w/'environment.json').exists())

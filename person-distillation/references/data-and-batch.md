@@ -2,7 +2,7 @@
 
 Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚本负责保存及一致性；工具成功不证明内容或范围完成。默认本地单文件HTML，飞书只有该用户实际配置/授权才使用。
 
-## 记录合同（schema_version=2）
+## 记录合同（新request为4；各回执保留自身schema）
 
 | 文件/对象 | 必须表达 |
 | --- | --- |
@@ -23,7 +23,24 @@ sources至少platform、发布id、url及所属账号source_id；没有稳定账
 
 cards文本类型：summary、what、use、workflow、thinking、limit/limits、directions、score_reason、result接受字符串或纯字符串数组；数组表示有序段落，构建HTML和Markdown时统一用双换行连接，不打印Python列表表示。learning是并列学习点，推荐直接写字符串数组；兼容单个字符串并转为单项数组，空值时可从workflow逐项取得。可选字段None视空；不接收嵌套数组、对象或数字混排。item_id、level仍为字符串，evidence仍为来源对象数组。直接维护output/reader-data.json时使用规范字符串字段与learning数组，不把cards兼容形式直接传给独立渲染器。
 
-analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留为内部检索摘要，但不能拿它覆盖页面的详细小节。简单短帖可声明interpretation_kind=brief。新在线请求schema_version=3且scope.minimum_stars=3，.distill/screening.json记录初筛；quality-spec.items的comprehension为[{source_point,evidence_locator,reader_section}]，映射原作要点到实际页面小节。旧schema_version=2任务保持接续兼容，但不能把历史回执称为本轮更严格内容质量已通过。
+analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留检索摘要，但不能覆盖详细小节。新请求使用schema_version=4，cards逐项明确reading_layer=deep/viewpoint；深读有analysis_sections，观点允许what，旧interpretation_kind=brief继续兼容。.distill/screening.json记录在线初筛，minimum_stars默认3；提供集合默认保留用户给定项。quality-spec.items.comprehension为[{source_point,evidence_locator,reader_section}]，映射主要原作内容到实际页面小节。所有4版审阅（包括提供集合）需要comprehension，不以minimum_stars=1关闭理解审阅。旧2/3任务继续接续，但升级质量合同后需实际补核，不自动沿用旧“通过”状态。
+
+可选`.distill/reading-units.json`是阅读单元对象数组，结构见[reader-data](reader-data.md)。每份入选来源在一个主要单元中出现，聚合不改变作品计数；完整来源卡继续保留。quality-spec另加unit_reviews：
+
+```json
+{"unit_reviews":[{"unit_id":"view-a","checks":[{"claim":"据本次原作核实的聚合判断","evidence_locator":"材料与实际段落位置","status":"qualified"}],"comprehension":[{"item_id":"source-a","source_point":"来源中的具体判断","evidence_locator":"原文位置","reader_section":"正文"}]}]}
+```
+
+每个单元的所有item_ids都需至少一个实际要点映射；reader_section为真实analysis_sections标题或正文/背景/归属。只填checks标签不能代替理解。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
+
+避免手拼当前request、material_refs或小节名，可先生成待填草稿：
+
+```text
+python <skill>/scripts/record_templates.py quality --workspace <workspace> --output <new-quality-spec.json> --changed-only
+python <skill>/scripts/record_templates.py scope --workspace <workspace> --output <new-scope-spec.json>
+```
+
+草稿只搬运已有身份/材料/小节，证据、通过状态和时间留空，不能直接accept。目标存在会停止以保护人工修改。scope草稿不制造末页、完整集合或同版已核声明。填完真实观察后才交对应命令。这个入口用于减少字段返工，不替Agent审阅。
 
 ## 正确启动与审阅命令
 
@@ -34,7 +51,7 @@ python <skill>/scripts/distill.py init --workspace <workspace> --request <reques
 python <skill>/scripts/preflight.py --workspace <workspace>
 python <skill>/scripts/preflight.py --workspace <workspace> --require-ready
 python <skill>/scripts/distill.py import --workspace <workspace> --input <catalog.json>
-python <skill>/scripts/distill.py prepare --workspace <workspace> --ids <selected IDs>
+python <skill>/scripts/distill.py prepare --workspace <workspace> --ids <id1,id2,id3>
 python <skill>/scripts/distill.py review --workspace <workspace> --input <correction-spec.json>
 python <skill>/scripts/distill.py accept-quality --workspace <workspace> --input <quality-spec.json>
 python <skill>/scripts/distill.py render --workspace <workspace>

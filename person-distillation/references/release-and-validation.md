@@ -8,7 +8,7 @@ Skill安装可发现、依赖安装成功、平台访问就绪、研究范围完
 
 ## 最小冷启动命令
 
-无需视频时核心仅用Python标准库，不安装下载器／ASR。确实需要视频且没有可用工具时，Agent可运行随包bootstrap，先查看计划，再在现有授权内apply；计划不是额外用户问卷。默认在工作区创建独立venv；Windows长路径时计划任务键控的短用户缓存目录，或沿显式PERSON_DISTILLATION_RUNTIME_ROOT，需宿主授权时按实际路径处理。通过官方PyPI获取公开包，不修改系统Python、PATH或代理，不自动登录；具体见[效率与记录](efficient-execution.md)。
+无需视频时核心仅用Python标准库，不安装下载器／ASR。确实需要视频且没有可用工具时，Agent可运行随包bootstrap，先查看计划，再在现有授权内apply；计划不是额外用户问卷。默认在当前使用者受管理缓存创建独立venv，按解释器ABI/平台/依赖合同/模型配置复用，不按研究目录重复安装；位置为PERSON_DISTILLATION_RUNTIME_ROOT或CODEX_HOME/person-distillation/runtime，否则当前用户系统缓存。可用--runtime-dir指定准确位置；已有本工具管理的旧任务环境可以保留使用。需宿主授权时按实际路径处理。通过官方PyPI获取公开包，不修改系统Python、PATH或代理，不自动登录；具体见[效率与记录](efficient-execution.md)。
 
 ```text
 python <skill>/scripts/bootstrap.py --workspace <新工作区> --profile media
@@ -18,11 +18,13 @@ python <skill>/scripts/preflight.py --workspace <新工作区>
 
 media提供yt-dlp与imageio-ffmpeg发行的FFmpeg；工具名支持某平台不代表该平台已成功。先探现成字幕，无稿且确需ASR时再增装一条路线：
 
+若计划用Pillow处理关键帧/审阅拼图，给media或whisper命令加`--image-review`，按需纳入Pillow依赖和PIL.Image/ImageOps/ImageDraw探测；实际图像脚本必须由该environment.json中准确Python执行。无需图像处理时不增装Pillow。
+
 ```text
 python <skill>/scripts/bootstrap.py --workspace <工作区> --profile whisper --download-model --apply
 ```
 
-这条命令专为选择Whisper的情况提供CPU small样例；可显式选择适用模型，不是全部任务的默认。执行时，下载依赖和本地模型并记录模型revision、包版本、日志与environment.json；不预设GPU或SenseVoice已安装。tiny仅可用于低资源／安装烟测，不把其输出直接称高质量稿。已有更合适且验证过的SenseVoice或已授权云端可选；需要新部署时按下表官方接口准备模型、tokens、VAD，不默认同时装两引擎。
+这条命令专为选择Whisper的情况提供CPU small样例；可显式选择适用模型，不是全部任务的默认。首次下载依赖和本地模型，记录模型revision、包版本、日志与environment.json；新任务通过本地核查后仅写自己的runtime-binding回执，不重复pip或模型下载。缓存按所有权/合同核验，安装有跨进程锁和原子完成标记，非本工具目录不会覆盖；旧任务底稿与模型不删除。不预设GPU或SenseVoice已安装。tiny仅可用于低资源／安装烟测，不把其输出直接称高质量稿。已有更合适且验证过的SenseVoice或已授权云端可选；需要新部署时按下表官方接口准备模型、tokens、VAD，不默认同时装两引擎。
 
 首次模型下载可能较大；Agent先核网络、磁盘和预计体积，在用户预算内执行。费用／宿主审批按真实要求处理；网络失败、无兼容wheel、模型不完整明确失败，不偷偷改第三方镜像、关闭TLS或借作者本机模型宣称冷启动成功。修复条件后仅重跑失败环节，保留下载缓存。bootstrap成功后必须用一个实际可访问短样本验证抽音频、完整稿与首尾，再将video_path记ready。
 
@@ -68,6 +70,7 @@ python <skill>/scripts/validate_reader.py --input <skill>/assets/reader.example.
 - 测缺少人物、缺少范围、完整数量、时间、时间＋数量、全部、继续、重名和旧页面编辑。完整请求零重复范围确认，缺失信息一次补齐。
 - 脚本实际运行，在带空格和中文的非原路径验证。其他系统未运行就只记可移植代码检查。
 - 空配置、缺工具、未接浏览器、未登录、失效路径、依赖安装失败都要测；新venv从官方源安装至少一条必要媒体路线。复用本机工具测试另外记，不得充当新用户冷启动。
+- 运行时回归覆盖两任务共用同一合同、ABI/模型/配置隔离、显式路径、旧任务环境、未知所有权、损坏模型、安装失败/接续与真实跨进程锁。warm路径不得调用ensurepip、pip install或模型网络；缓存通过只代表依赖已核，必须仍标transcript_verified=false。安装/下载mock测试只能证明编排和缓存合同，不能冒称真实新机安装通过；无实际媒体新测时明确保留边界。
 - 获取回归重放HTTP200业务限流、403、动态空壳、工具超时、重复分页、热门精选目录与未知日期；验证不重复撞入口、不误报最新集合完成。运行scripts/test_acquisition.py及test_pipeline.py。
 - 准备门槛回归：A平台可读而B要登录、X缺外部连接时，不能先导入／解析／生成A；清单或初探未齐不逐个平台发登录问句，集中人工处理后统一复验才开放采集。首次窗口与来源能力分开；数量修改不废登录；切running不绕过受阻来源；探测次数有界。
 - 大改用独立行为测试验证普通请求；用户明确授权新对话时创建全新项目外对话，只给普通请求，不注入修复规则。在线测试可做已授权的只读轻探，遇真实登录/权限需要用户时停依赖并回收结果；不继承维护者材料或把合成结果当现场通过。未授权新对话则用隔离副本自检，不主动创建。测试至少覆盖发现Skill、初始化、接入恢复、最少交互；内容/HTML另有实际样本才验，不用单元测试数量代替。
