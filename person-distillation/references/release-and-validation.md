@@ -8,7 +8,7 @@ Skill安装可发现、依赖安装成功、平台访问就绪、研究范围完
 
 ## 最小冷启动命令
 
-无需视频时核心仅用Python标准库，不安装下载器／ASR。确实需要视频且没有可用工具时，Agent可运行随包bootstrap，先查看计划，再在现有授权内apply；计划不是额外用户问卷。它只在该工作区创建独立venv，通过官方PyPI获取公开包，不修改系统Python、PATH或代理，不自动登录。
+无需视频时核心仅用Python标准库，不安装下载器／ASR。确实需要视频且没有可用工具时，Agent可运行随包bootstrap，先查看计划，再在现有授权内apply；计划不是额外用户问卷。默认在工作区创建独立venv；Windows长路径时计划任务键控的短用户缓存目录，或沿显式PERSON_DISTILLATION_RUNTIME_ROOT，需宿主授权时按实际路径处理。通过官方PyPI获取公开包，不修改系统Python、PATH或代理，不自动登录；具体见[效率与记录](efficient-execution.md)。
 
 ```text
 python <skill>/scripts/bootstrap.py --workspace <新工作区> --profile media

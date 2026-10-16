@@ -40,3 +40,7 @@ Use a Python version compatible with the selected package wheels; running core s
 - Any exact remaining user action or failed dependency; distinguish base deployment from source access.
 
 Once installed, normal use only needs a person and quantity/time scope. Example: `使用 $person-distillation，蒸馏某位创作者最近30项公开内容。`
+
+## Research timing (after deployment)
+
+The installed skill records local timing by default during actual research. It adds no base dependencies or extra user questionnaire. Follow `references/performance-tracing.md` for phase windows and pass the actual workspace to media/fetch helpers. Keep logs local; never include them in a published skill. Authorized public project-developer credits are bundled; no private user settings, research data, login state or models are included.

@@ -41,7 +41,7 @@ class Extractor(HTMLParser):
         selected=max(eligible,key=lambda k:len(bodies[k]))
         return bodies[selected],[image for k,image in self.images if k==selected],selected
 
-def fetch(url,out):
+def _fetch(url,out):
     if not url.startswith(('https://','http://')):raise ValueError('Public HTTP URL required')
     out=Path(out);out.mkdir(parents=True,exist_ok=True);start=time.monotonic()
     request=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
@@ -63,5 +63,12 @@ def fetch(url,out):
           'coverage_requires_agent_check':True}
     (out/'metadata.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8');return meta
 
+def fetch(url,out,workspace=None):
+    from performance_trace import span
+    with span(workspace,'acquisition','public-article',category='fetch') as traced:
+        result=_fetch(url,out)
+        traced['metrics']={'items':1,'bytes':(Path(out)/'page.html').stat().st_size}
+        return result
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('url');p.add_argument('--out',required=True);a=p.parse_args();print(json.dumps(fetch(a.url,a.out),ensure_ascii=False))
+    p=argparse.ArgumentParser();p.add_argument('url');p.add_argument('--out',required=True);p.add_argument('--workspace');a=p.parse_args();print(json.dumps(fetch(a.url,a.out,a.workspace),ensure_ascii=False))

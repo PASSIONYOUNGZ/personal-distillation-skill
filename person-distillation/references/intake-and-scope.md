@@ -8,7 +8,7 @@
 
 默认跨平台已核同版去重总作品数；同题只关联，不凭同题合并文章/不同视频/修订版。同版跨日分发保留所有时间，默认按作品版本最早已核发布时间排序（sort_date/date_basis）；原作实质增订另版。用户按发布条目计数则count_basis=publication，每发布项独立。置顶、纯转发和无判断互动不自动算原创。
 
-最新20项：每个核心目录越过第20项所在日期或真实末页，核同日候选后定稿。未知日期和边界先后不能用稳定ID推断。每平台数量另存by_platform，交付为去重并集，不删除额外原链来凑数。
+最新20项默认指初筛后三星及以上的最近20项：每个核心目录越过合格第20项所在日期或真实末页，保留此前一二星排除依据，再核同日候选。未知日期和边界先后不能用稳定ID推断。用户明确“最近20项全部、不要筛”时minimum_stars=1，按原集合整理。每平台数量另存by_platform，交付为去重并集，不删除额外原链来凑数。
 
 时间含首尾日，以用户实际时区按日历月份解释“近三个月”，保存start/end与as_of；数量+时间取交集。长任务固定as_of，不不断追新。历史区间核区间上界，无需今天首页。
 
@@ -23,7 +23,7 @@
 mode=count/time/count_in_time/all/representative/provided；all只用于明确全部。provided用于用户提供的材料集合，collection_basis说明集合/清单；有限导入不能证明全网最新N。representative需原话及有界解释，不走最新全目录完成逻辑。
 
 ```json
-{"schema_version":2,"original_request":"蒸馏林示例最近一些有代表性的内容","person":{"name":"林示例","seed_urls":[]},"scope":{"mode":"representative","sample_budget":12,"agent_interpretation":"近期有界代表集合","selection_basis":"主题、变化与反例","stop_condition":"达到样本预算或相关材料耗尽","unit":"total","order":"representative","platforms":[],"timezone":"使用者实际时区"}}
+{"schema_version":3,"original_request":"蒸馏林示例最近一些有代表性的内容","person":{"name":"林示例","seed_urls":[]},"scope":{"mode":"representative","sample_budget":12,"minimum_stars":3,"agent_interpretation":"近期有界代表集合","selection_basis":"主题、变化与反例","stop_condition":"达到样本预算或相关材料耗尽","unit":"total","order":"representative","platforms":[],"timezone":"使用者实际时区"}}
 ```
 
 脚本校结构，不自动猜自然语言。init保存固定as_of；精确数量不被擅改成样本。request变更用distill.py amend --request <新请求> --revision-evidence <用户修改依据>，旧请求存request-history，成功稿/会话不删除；范围回执重核，相关画像/集合重审。不同人物用新目录或明确身份依据，不能偷套旧准备。

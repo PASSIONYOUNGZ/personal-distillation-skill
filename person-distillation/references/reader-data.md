@@ -23,7 +23,7 @@
 | accounts | 已核人物主页的label/url |
 | biography | 人物介绍数组，兼容旧结构；新任务只放一个无title对象，以text一段概括角色、代表实践和有依据特点，sources集中列label/url，可选items指向实例。highlights为text中少量原样短语数组，用于重点身份/实践加粗，不加新事实，不整段加粗。年份与转折交timeline，不分小节复述履历 |
 | avatar | 人物已核账号头像：path、caption、url或account_url、platform、observed_at、selection_reason；与制作人头像、作品主图区分 |
-| timeline | event_date/title/text/date_basis/basis/url；published_date另记依据的发表日。兼容旧date但不拿发表日期补事件时间；背景不受作品窗口限制 |
+| timeline | event_date/title/text/date_basis/basis/url；可选event_label为“大学期间”等阶段，date_note为下方黑色小字“具体日期未知”，不将未知说明挤进日期徽标。published_date另记依据的发表日；背景不受作品窗口限制，缺事件日不回退发表日 |
 | topic_navigation | 可选独立主题导航数组title/text/items；仅有额外导航价值时填写，不从directions自动复制或画连线 |
 | directions | title/chain/direct/transfer/foundation/items，末尾综合直接内容、可迁移做法及隐含基础 |
 | hero_image/showcase | hero_image仅用于明确指定主图的兼容展示；普通首页默认右侧“近期精选”。showcase为可选真实封面条目ID，不应用同三项再重复一排速览 |
@@ -38,6 +38,10 @@ documents为文章原文版本数组，type=document，document.format为text/ma
 coverage可用字符串或{label,detail}，给读者有效边界，如“画面解析 · 语音待核”。它来自材料实际覆盖，不由kind=video或存在音轨推断；长诊断仍留内部。第一批正常材料就保存原文结构并核到页面的字段映射，后续增量沿同一入口，不临交付补档或额外做登录前演练。
 
 creator可选：name/role/avatar（path）/links（label/url）。未指定role用“项目制作”；仅明确实际身份才写“项目开发者”，不把使用者冒称Skill开发者。个人图片和配置不进入发布包。
+
+默认品牌署名另由包内assets/project-developer.json及其公开头像提供，已经获得项目开发者的分发授权；它是项目公开署名，不是当前使用者配置/登录。未声明creator时仍显示项目开发者与主页；显式creator继续按实际角色处理。该公开署名是私有配置不入包原则的明确例外，不准顺带打包其他账号、配置或人物材料。
+
+items.analysis_sections为[{title,paragraphs:[...]}]，复杂作品用于呈现主要内容，what保留兼容与检索摘要；构建、Markdown、HTML与来源审阅使用同一组段落。不要把完整字幕拿到后仍仅写what几句。level/limit保留底稿，不常显“简单解析”或“阅读时留意”；重要限制自然限定相应正文。coverage只在入口处简短出现一次，不在卡片展开正文再重复；原作链接保留一组，证据相同不重复列“依据”。
 
 配置读取顺序：任务config.creator_file→config.project_settings_file指定的设置文件→PERSON_DISTILLATION_SETTINGS指定设置文件→宿主CODEX_HOME下person-distillation/settings.json（缺省为~/.codex下同路径）→通用品牌。设置文件格式为{"creator_file":"配置路径"}，相对路径以设置文件目录为基准；任务config.creator_enabled=false可关闭。只读声明位置，不扫描整机或猜账号。显式坏配置报告警告，不偷偷退用别人的身份。构建将公开字段与头像复制到任务.distill/user并记录build_metadata来源；头像失效时保留ID/链接并报缺项。新用户没有设置也能完整生成，不能要求首次调用填写制作资料。
 

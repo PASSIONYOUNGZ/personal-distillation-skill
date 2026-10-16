@@ -86,6 +86,15 @@ def person_fingerprint(data):
     return fingerprint({'profile':profile,'notes':data.get('notes'),'profile_image':data.get('profile_image'),'background_files':data.get('background_files'),
                         'related_items':{i:data['items'].get(i) for i in sorted(related)}})
 
+
+def comprehension_valid(item,review):
+    """Check the declared source-to-reader mapping, never assert semantic truth."""
+    card=item.get('card') or {};parts=card.get('analysis_sections') or []
+    if not parts and card.get('interpretation_kind')!='brief':return False
+    labels={p.get('title') for p in parts} if parts else {'正文'}
+    rows=review.get('comprehension',[])
+    return bool(rows) and all(isinstance(r,dict) and r.get('source_point') and r.get('evidence_locator') and r.get('reader_section') in labels for r in rows)
+
 def accept_quality(w, spec):
     data=inputs(w);ids=set(data['items']);path=w/'.distill/quality-review.json'
     previous=read(path) if path.exists() else {}
@@ -93,15 +102,20 @@ def accept_quality(w, spec):
     retained={r['item_id']:r for r in previous.get('items',[]) if r.get('item_id') in ids and
               previous.get('item_fingerprints',{}).get(r['item_id'])==current_hashes[r['item_id']] and checks_valid(r.get('checks'))}
     incoming=spec.get('items',[])
+    request=read(w/'request.json') if (w/'request.json').exists() else {}
+    requires_comprehension=request.get('scope',{}).get('minimum_stars',1)>1
     if len(incoming)!=len({r.get('item_id') for r in incoming}) or any(r.get('item_id') not in ids for r in incoming):
         raise ValueError('Review item IDs duplicate or outside selected set')
     for r in incoming:
         if not checks_valid(r.get('checks')) or not r.get('coverage') or not r.get('remaining_gap'):
             raise ValueError('Item review needs evidence checks, actual coverage and remaining_gap (none if absent)')
+        if requires_comprehension and not comprehension_valid(data['items'][r['item_id']],r):
+            raise ValueError('Map the original main points to actual reader sections; complex works need analysis_sections, brief posts an explicit interpretation_kind=brief')
         expected={m.get('material_id') or m.get('file') for m in data['items'][r['item_id']]['catalog'].get('materials',[]) if m.get('file')}
         if not expected or set(r.get('material_refs',[]))!=expected: raise ValueError('Review material_refs must name all participating original/auxiliary inputs')
         retained[r['item_id']]=r
     if set(retained)!=ids:raise ValueError('Review missing/stale items: '+','.join(sorted(ids-set(retained))))
+    if requires_comprehension and any(not comprehension_valid(data['items'][i],retained[i]) for i in ids):raise ValueError('Missing current source-to-reader comprehension review')
     phash=person_fingerprint(data)
     claims=spec.get('person_claims')
     if not claims and previous.get('person_fingerprint')==phash:claims=previous.get('person_claims')
@@ -119,6 +133,8 @@ def quality_status(w):
     try:
         current=inputs(w);rows=r.get('items',[])
         valid=bool(rows) and len(rows)==len(current['items']) and {v.get('item_id') for v in rows}==set(current['items']) and r.get('schema_version')==2 and r.get('overall_status')=='reviewed' and checks_valid(r.get('person_claims')) and all(checks_valid(v.get('checks')) for v in r.get('items',[])) and r.get('input_fingerprint')==fingerprint(current)
+        request=read(w/'request.json') if (w/'request.json').exists() else {}
+        if request.get('scope',{}).get('minimum_stars',1)>1:valid=valid and all(comprehension_valid(current['items'][row['item_id']],row) for row in rows)
     except (ValueError,KeyError,OSError):valid=False
     return bool(valid),'Current bound review' if valid else 'Review missing, legacy, tampered or stale'
 

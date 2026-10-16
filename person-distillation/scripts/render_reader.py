@@ -12,10 +12,12 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from document_render import render_document
+from content_analysis import sections as analysis_sections, text as analysis_text
 
 ASSETS = Path(__file__).resolve().parents[1] / 'assets'
 CSS = (ASSETS / 'reader.css').read_text(encoding='utf-8')
 JS = (ASSETS / 'reader.js').read_text(encoding='utf-8')
+PROJECT_DEVELOPER = json.loads((ASSETS/'project-developer.json').read_text(encoding='utf-8')) if (ASSETS/'project-developer.json').is_file() else {}
 PRESETS = [('晴空','#3b82f6'),('鸢尾','#8b5cf6'),('樱桃','#ef6b99'),('蜜桃','#f28e55'),
            ('柠檬','#d7b42b'),('海盐','#0caab5'),('薄荷','#3dae82'),('莓紫','#c15dc5')]
 PALETTE = ['#e95b68','#ed795e','#f09b4f','#deb63e','#aec24c','#70bb6c',
@@ -117,6 +119,14 @@ def image(source, base):
     return 'data:'+mime+';base64,'+base64.b64encode(path.read_bytes()).decode()
 
 
+def timeline_date(entry):
+    value=entry.get('event_label') or (entry.get('event_date') if 'event_date' in entry else entry.get('date')) or '时间待核'
+    note=entry.get('date_note','')
+    pattern=r'[（(](?:具体)?(?:年份|日期|时间|转岗时间)[^）)]*(?:未公开|未知|未确认)[）)]'
+    if re.search(pattern,value):value=re.sub(pattern,'',value).strip();note=note or '具体日期未知'
+    return '<div class="milestone-date"><time>'+esc(value)+'</time>'+('<small class="date-note">'+esc(note)+'</small>' if note else '')+'</div>'
+
+
 def section(number, ident, title, description=''):
     note = '<p>'+esc(description)+'</p>' if description else ''
     return f'<section class="section" id="{esc(ident)}"><div class="section-head"><span class="section-number">{esc(number.split(" / ")[0])}</span><div class="section-heading"><h2>{esc(title)}</h2>{note}</div></div>'
@@ -171,6 +181,7 @@ def transcript_summary(title, action='查看全文'):
 
 
 def project_brand(creator, base, symbol):
+    if not creator and PROJECT_DEVELOPER:creator=PROJECT_DEVELOPER;base=ASSETS
     """Optional project attribution, distinct from the researched person's accounts."""
     avatar = creator.get('avatar')
     if avatar:
@@ -313,7 +324,7 @@ def render(data, base):
             publication = '<p class="milestone-publication">资料发表于 '+esc(m['published_date'])+'</p>' if m.get('published_date') else ''
             citations = source_links(m.get('sources',[]))+(link('查看来源',m['url']) if m.get('url') else '')
             basis = ' · '.join(x for x in (esc(m.get('basis','')),esc(m.get('date_basis','')),citations) if x)
-            chunks += ['<article class="milestone"><time>'+esc(event_date)+'</time><div class="milestone-content"><h3>'+esc(m['title'])+'</h3>'+paragraphs(m['text'])+publication+('<div class="evidence">'+basis+'</div>' if basis else '')+'</div></article>']
+            chunks += ['<article class="milestone">'+timeline_date(m)+'<div class="milestone-content"><h3>'+esc(m['title'])+'</h3>'+paragraphs(m['text'])+publication+('<div class="evidence">'+basis+'</div>' if basis else '')+'</div></article>']
         chunks += ['</div></section>']
     if profile.get('topic_navigation'):
         chunks += [heading('mindmap','学习主题导航'),'<div class="topic-navigation" style="--topic-columns:'+str(min(3,len(profile['topic_navigation'])))+'">']
@@ -338,25 +349,28 @@ def render(data, base):
     for tone, t in enumerate(themes):
         chunks += ['<h3 class="topic-label" data-tone="'+str(tone%4)+'"><span class="topic-chip">'+esc(topic_heading(tone,t))+'</span></h3>']
         for item in (i for i in items if i['topic']==t):
-            search_text = ' '.join([item['title'],item.get('summary',''),item.get('what',''),*item.get('learning',[]),*[str(item.get(k,'')) for k in ('use','thinking','directions')]]).lower()
+            search_text = ' '.join([item['title'],item.get('summary',''),item.get('what',''),analysis_text(item.get('analysis_sections')),*item.get('learning',[]),*[str(item.get(k,'')) for k in ('use','thinking','directions')]]).lower()
             thumb = ''
             if item.get('cover'):
                 thumb = f'<img class="summary-cover{(" contain" if item["cover"].get("fit")=="contain" else "")}" loading="lazy" src="{image(item["cover"],base)}" alt="{esc(item["cover"]["caption"])}">'
             opened = ' open' if first else ''
             first = False
-            chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{esc(item.get("date") or "日期未确认")}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+coverage_note(item)+'<div class="prose">']
+            chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{esc(item.get("date") or "日期未确认")}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
             for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
-                if item.get(field):chunks += ['<h5>'+label+'</h5>'+paragraphs(item[field])]
+                if field=='what' and item.get('analysis_sections'):
+                    chunks += ['<h5>'+label+'</h5><div class="structured-analysis">']
+                    for row in analysis_sections(item['analysis_sections']):chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+                    chunks += ['</div>']
+                elif item.get(field):chunks += ['<h5>'+label+'</h5>'+paragraphs(item[field])]
             if item.get('learning'):chunks += ['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(x)+'</li>' for x in item['learning'])+'</ul>']
-            if item.get('level'):chunks += ['<p class="analysis-level">'+esc(item['level'])+'</p>']
-            if item.get('evidence'):chunks += ['<div class="evidence">依据：'+''.join(link(v.get('label','来源'),v['url']) if v.get('url') else '<span>'+esc(v.get('label') or v.get('file') or v.get('material_id'))+'</span>' for v in item['evidence'])+'</div>']
+            additional=[v for v in item.get('evidence',[]) if v.get('url') not in {s['url'] for s in item['sources']}]
+            if additional:chunks += ['<div class="evidence">'+''.join(link(v.get('label','补充来源'),v['url']) for v in additional if v.get('url'))+'</div>']
             chunks += ['</div>']
             if item.get('images'):
                 chunks += ['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
                 for pic in item['images']:
                     chunks += [f'<figure><img loading="lazy" data-enlarge src="{image(pic,base)}" alt="{esc(pic["caption"])}"><figcaption>{esc(pic["caption"])}{(" · "+link("图片来源",pic["url"])) if pic.get("url") else ""}</figcaption></figure>']
                 chunks += ['</div>']
-            if item.get('limit'):chunks += ['<div class="notice"><strong>阅读时留意</strong><p>'+esc(item['limit'])+'</p></div>']
             if stars_value(item) is not None and item.get('score_reason'):chunks += ['<p class="recommendation-note"><strong>推荐理由</strong> · '+esc(item['score_reason'])+'</p>']
             if item.get('result'):
                 result_label = '文字稿从哪里来' if any(t.get('type') != 'document' for t in item.get('transcripts',[])) else '已查看的材料'

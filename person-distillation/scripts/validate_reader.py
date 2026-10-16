@@ -24,6 +24,11 @@ def validate(data,base):
         if not creator and (not v.get('caption') or not url(v.get('account_url') or v.get('url') or v.get('source_url'))):errors.append('Missing original image source/caption '+label)
     for item in items:
         ident=str(item.get('id'))
+        if 'analysis_sections' in item:
+            try:
+                from content_analysis import sections
+                sections(item['analysis_sections'])
+            except ValueError as exc:errors.append(ident+': '+str(exc))
         for key in ('title','topic'):
             if not isinstance(item.get(key),str) or not item[key].strip():errors.append(ident+': missing '+key)
         for key in ('summary','what','limit'):

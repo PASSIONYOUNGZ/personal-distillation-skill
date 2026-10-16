@@ -40,6 +40,8 @@ def normalize(value):
         raise ValueError('Provided scope needs a material-set description or manifest')
     s.setdefault('unit', 'total'); s.setdefault('order', 'representative' if mode in ('representative', 'provided') else 'latest')
     s.setdefault('platforms', []); s.setdefault('timezone', 'local'); s.setdefault('count_basis', 'work_version')
+    if value.get('schema_version',2)>=3:s.setdefault('minimum_stars',1 if mode=='provided' else 3)
+    if 'minimum_stars' in s and (type(s['minimum_stars']) is not int or not 1<=s['minimum_stars']<=5):raise ValueError('minimum_stars must be 1..5')
     if s['unit'] not in ('total', 'per_platform') or s['order'] not in ('latest', 'representative'):
         raise ValueError('Invalid unit/order')
     if s['count_basis'] not in ('work_version', 'publication'): raise ValueError('Invalid count_basis')

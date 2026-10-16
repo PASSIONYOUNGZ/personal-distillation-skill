@@ -21,6 +21,8 @@ def normalize_card(card):
     for field in ('summary','what','use','workflow','thinking','limit','limits','directions','score_reason','result'):
         if field in card:result[field]='\n\n'.join(pieces(card[field],field))
     result['learning']=learning
+    from content_analysis import sections
+    if 'analysis_sections' in card:result['analysis_sections']=sections(card['analysis_sections'])
     return result
 
 
@@ -78,7 +80,7 @@ def build(w):
     output=[]
     for ident in chosen:
         item=copy.deepcopy(by_id[ident]);card=normalize_card(by_card[ident])
-        for k in ('summary','what','use','workflow','thinking','directions','evidence','level','coverage'):
+        for k in ('summary','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage'):
             if k in card:item[k]=copy.deepcopy(card[k])
         item.setdefault('summary','');item.setdefault('what','')
         item['learning']=card.get('learning') or ([card['workflow']] if card.get('workflow') else [])

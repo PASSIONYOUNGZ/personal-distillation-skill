@@ -1,0 +1,22 @@
+{
+  "name": "PassionYoungz",
+  "avatar": {
+    "path": "project-developer-avatar.jpg",
+    "caption": "项目开发者公开头像"
+  },
+  "links": [
+    {
+      "label": "GitHub",
+      "url": "https://github.com/PASSIONYOUNGZ"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/PassionYoungz"
+    },
+    {
+      "label": "小红书",
+      "url": "https://www.xiaohongshu.com/user/profile/674a9243000000001d02eb72"
+    }
+  ],
+  "role": "项目开发者"
+}

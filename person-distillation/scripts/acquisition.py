@@ -133,6 +133,8 @@ def record(workspace, observation):
                      'operation':observation['capability'],'source_id':observation.get('source_id') or observation['channel'],
                      'route_id':observation.get('route_id') or observation['route'],
                      'transport':observation.get('transport'),'error_type':None if decision['outcome']=='ok' else decision['outcome'],
+                     'category':'browser' if observation.get('transport') in ('browser','iab','chrome','edge') else 'fetch',
+                     'span_kind':'tool',
                      'evidence':['.distill/acquisition-log.jsonl#'+entry['receipt_id']],**timing})
     with path.open('a', encoding='utf-8') as f: f.write(json.dumps(entry, ensure_ascii=False) + '\n')
     return entry

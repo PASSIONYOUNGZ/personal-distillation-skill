@@ -302,7 +302,9 @@ def render(w):
         item=by_id[card['item_id']];packet_file=data(w,'packets/'+item['id']+'.json')
         report += ['### '+item['title'],'',link('原作',item['sources'][0]['url'])+' · '+card.get('level','简单解析'),'']
         for field,label in [('what','内容'),('use','有什么用'),('workflow','做法'),('thinking','判断与思路'),('limits','适用条件与局限'),('directions','可选学习方向')]:
-            if card.get(field):report += ['**'+label+'。** '+card[field],'']
+            if field=='what' and card.get('analysis_sections'):
+                for part in card['analysis_sections']:report+=['#### '+part['title'],'','\n\n'.join(part['paragraphs']),'']
+            elif card.get(field):report += ['**'+label+'。** '+card[field],'']
         if card.get('evidence'):report += ['依据：'+'、'.join(link(x.get('label','来源'),x['url']) for x in card['evidence']),'']
         if not packet_file.exists():continue
         packet=read(packet_file)
@@ -396,6 +398,9 @@ def verify(w):
     quality=read(data(w,'quality-review.json')) if data(w,'quality-review.json').exists() else {}
     from evidence_review import quality_status,visual_status,offline_status,preview_status
     quality_ready,quality_reason=quality_status(w)
+    from content_screening import workspace_audit
+    screening=workspace_audit(w)
+    errors+=screening['errors']
     visual_ready=visual_status(w) if 'html' in config.get('output',{}).get('formats',['html']) else True
     offline=offline_status(w) if 'html' in config.get('output',{}).get('formats',['html']) else {'status':'not_applicable'}
     preview=preview_status(w) if 'html' in config.get('output',{}).get('formats',['html']) else {'status':'not_applicable'}
@@ -410,7 +415,7 @@ def verify(w):
       'delivery_checks_complete':not limitations,'delivery_limitations':limitations,
       'initial_preparation_complete':preparation_passed(w),
       'ready_for_final_delivery':artifact_ready and coverage['scope_supported'],
-      'semantic_quality':'Requires actual source-based review; see quality-review.json',
+      'content_screening':screening,'semantic_quality':'Requires actual source-based review; see quality-review.json',
       'boundary':'Checks prove document/material integrity, not full-web completeness, linguistic accuracy or user mastery.'}
     write(data(w,'verification.json'),result);return result
 
@@ -438,16 +443,11 @@ def main():
     w=Path(args.workspace).resolve()
     from runlog import append,now
     stages={'init':'intake','amend':'intake','doctor':'environment','import':'acquisition','prepare':'acquisition','plan':'acquisition','review':'review','accept-quality':'review','accept-visual':'verification','render':'render','verify':'verification','record':'resume'}
-    began=now();started=time.perf_counter()
-    try:
+    from performance_trace import span
+    with span(w if args.command!='record' else None,stages[args.command],args.command,
+              category={'render':'render','verify':'verification','doctor':'setup'}.get(args.command,'other')) as traced:
         result=dispatch(w,args)
-    except Exception as exc:
-        append(w,{'stage':stages[args.command],'status':'failed','operation':args.command,'started_at':began,'ended_at':now(),
-                  'duration_seconds':round(time.perf_counter()-started,6),'duration_kind':'command_wall','error_type':type(exc).__name__})
-        raise
-    if args.command!='record':
-        append(w,{'stage':stages[args.command],'status':'partial' if args.command=='verify' and not result['ready_for_final_delivery'] else 'passed',
-                  'operation':args.command,'started_at':began,'ended_at':now(),'duration_seconds':round(time.perf_counter()-started,6),'duration_kind':'command_wall'})
+        if args.command=='verify' and not result['ready_for_final_delivery']:traced['status']='partial'
     if args.command=='verify':
         from process_report import save as save_process_report
         result['process_report']=save_process_report(w)

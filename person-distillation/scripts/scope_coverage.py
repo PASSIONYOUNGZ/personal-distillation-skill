@@ -7,6 +7,8 @@ from access_state import source_id
 def audit(request, selected, selection, ledger, review):
     request=normalize(request);scope=request['scope']
     gaps=check_selection(request,selected,selection.get('by_platform'))
+    if scope.get('minimum_stars',1)>1 and not review.get('screening_evidence'):
+        gaps.append('Filtered latest selection requires screening evidence across the candidate frontier')
     if not ledger.get('discovery_reviewed') or not ledger.get('discovery_evidence'):
         gaps.append('Source discovery/material provenance has not been reviewed')
     all_sources=ledger.get('sources',[])

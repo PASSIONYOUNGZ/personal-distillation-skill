@@ -5,7 +5,7 @@ logs in, reads cookies, edits PATH, changes proxies or modifies system Python.
 """
 from pathlib import Path
 from datetime import datetime, timezone
-import argparse, json, os, subprocess, sys
+import argparse, hashlib, json, os, subprocess, sys, time
 
 
 def write(path, value):
@@ -13,20 +13,30 @@ def write(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 
 
+def runtime_base(workspace,windows=None,user_root=None):
+    root=Path(workspace).resolve();base=root/'.tools/person-distillation'
+    declared=os.environ.get('PERSON_DISTILLATION_RUNTIME_ROOT')
+    if declared:return Path(declared).expanduser().resolve()/hashlib.sha256(str(root).encode()).hexdigest()[:10]
+    windows=os.name=='nt' if windows is None else windows
+    if windows and len(str(base/'venv'))>100:
+        cache=Path(user_root or os.environ.get('LOCALAPPDATA') or Path.home()/'.cache')
+        return cache/'person-distillation'/'rt'/hashlib.sha256(str(root).encode()).hexdigest()[:10]
+    return base
+
 def plan(workspace, profile='media', model_size='small', download_model=False):
     if profile not in ('media','whisper'): raise ValueError('Unsupported profile')
     if model_size not in ('tiny','small'): raise ValueError('Unsupported model size')
     if download_model and profile != 'whisper': raise ValueError('Model download requires whisper profile')
     root = Path(workspace).resolve()
-    base = root/'.tools/person-distillation'
-    if not base.resolve().is_relative_to(root): raise ValueError('Dependency directory escapes workspace')
+    base = runtime_base(root)
     python = base/('venv/Scripts/python.exe' if os.name=='nt' else 'venv/bin/python')
     packages = ['yt-dlp>=2026.8.19', 'imageio-ffmpeg>=0.6,<0.7']
-    if profile=='whisper': packages.append('faster-whisper>=1.1,<2')
+    if profile=='whisper': packages+=['faster-whisper>=1.1,<2','av>=11,<15']
     return {'workspace':str(root),'base':str(base),'python':str(python),'profile':profile,
             'packages':packages,'package_index':'https://pypi.org/simple',
             'model_repo':'Systran/faster-whisper-'+model_size if download_model else None,
             'model_dir':str(base/'models'/('faster-whisper-'+model_size)),
+            'runtime_location':'workspace' if base.is_relative_to(root) else 'task-keyed short user cache',
             'changes_system_python':False,'platform_access_verified':False}
 
 
@@ -48,9 +58,14 @@ def install(spec):
     def run(name, argv, timeout=480):
         write(receipt_path,receipt)
         if Path(argv[0]).name.lower() in ('python','python.exe','python3'):argv=[argv[0],'-X','utf8',*argv[1:]]
-        result=subprocess.run(argv,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout)
+        started=datetime.now(timezone.utc).isoformat();clock=time.monotonic()
+        from performance_trace import span
+        with span(spec['workspace'],'environment','bootstrap-'+name,category='setup') as traced:
+            result=subprocess.run(argv,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout)
+            if result.returncode:traced['status']='failed'
         log=logs/(name+'.log');log.write_text(result.stdout+'\n'+result.stderr,encoding='utf-8')
-        receipt['steps'].append({'step':name,'returncode':result.returncode,'log':str(log)})
+        receipt['steps'].append({'step':name,'returncode':result.returncode,'log':str(log),'started_at':started,
+                                'ended_at':datetime.now(timezone.utc).isoformat(),'seconds':round(time.monotonic()-clock,3)})
         write(receipt_path,receipt)
         if result.returncode:raise RuntimeError('Dependency step failed: '+name+'; inspect local log, do not retry unchanged')
         return result.stdout

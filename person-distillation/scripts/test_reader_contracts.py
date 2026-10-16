@@ -133,7 +133,10 @@ class ReaderContracts(unittest.TestCase):
             html=(w/'output/人物蒸馏.html').read_text(encoding='utf-8')
             markdown=(w/'output/人物蒸馏.md').read_text(encoding='utf-8')
             for field in ('what','use','workflow','thinking','limits','directions'):
-                for fragment in cards[0][field]:self.assertIn(fragment,markdown);self.assertIn(fragment,html)
+                for fragment in cards[0][field]:
+                    self.assertIn(fragment,markdown)
+                    if field!='limits':self.assertIn(fragment,html)
+                    else:self.assertNotIn(fragment,html)  # Retained in records, no repeated notice in the reader.
             self.assertEqual(inspect_html(reader,html),[]);self.assertEqual(source.read_bytes(),before)
             output_before=(w/'output/人物蒸馏.html').read_bytes()
             cards[0]['thinking']={'not':'plain text'};distill.write(source,cards)
@@ -230,6 +233,8 @@ class ReaderContracts(unittest.TestCase):
                          'outcome':'tool_timeout','evidence':['synthetic tool observation'],'duration_seconds':43.25}
             acquisition.record(w,observation)
             rows=[json.loads(x) for x in (w/'.distill/run-log.jsonl').read_text(encoding='utf-8').splitlines()]
+            self.assertEqual(rows[0]['trace_event'],'start')
+            rows=[r for r in rows if r.get('trace_event')!='start']
             self.assertEqual(rows[0]['duration_kind'],'command_wall');self.assertGreaterEqual(rows[0]['duration_seconds'],0)
             self.assertEqual(rows[1]['duration_kind'],'tool_reported');self.assertEqual(rows[1]['duration_seconds'],43.25)
             self.assertFalse(any(x.get('duration_kind')=='user_wait' for x in rows))

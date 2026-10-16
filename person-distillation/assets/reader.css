@@ -91,7 +91,7 @@
 .coverage-note{max-width:960px;border-left:2px solid var(--accent);padding:2px 0 2px 13px;margin:4px 0 20px;color:var(--muted);font-size:13px;line-height:1.8}
 .coverage-note strong{font-size:13px;font-weight:600}.card-body .coverage-note p{font-size:13px;margin:4px 0 0;color:var(--muted)}
 /* Switch when the table itself is narrow, including desktop sidebars and zoom. */
-@container catalog (max-width:940px){
+@media(max-width:760px){
  .catalog-table,.catalog-table tbody{display:block}
  .catalog-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
  .catalog-table tr[data-item]{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;padding:20px 24px;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0;background:var(--card)}
@@ -125,3 +125,14 @@
  .rail nav{grid-row:3}.has-creator .creator-profile{margin-top:10px}
  .creator-name{font-size:13px}.creator-role{font-size:11px}.creator-links a{font-size:11px;min-height:30px}
 }
+
+/* Intrinsic cover dimensions avoid the letterbox imposed by a fixed ratio. */
+.recent-card{grid-template-columns:minmax(0,50%) minmax(0,1fr)}
+.recent-thumbnail{aspect-ratio:auto;border:0;background:transparent;border-radius:8px;line-height:0}
+.recent-thumbnail img{height:auto;max-height:none;object-fit:initial;background:transparent}
+.milestone-date{display:grid;align-content:start;justify-items:start;gap:5px}
+.milestone-date .date-note{font-size:11px;line-height:1.55;color:var(--ink);font-weight:400;max-width:116px}
+.structured-analysis .analysis-section{margin:18px 0 22px}.analysis-section h6{font-family:inherit;font-weight:650;font-size:16px;line-height:1.7;color:var(--ink);margin:0 0 8px}
+@media(min-width:761px){.table-shell{overflow-x:auto}.catalog-table{min-width:640px;table-layout:fixed}}
+@media(min-width:761px) and (max-width:1300px){.catalog-table{font-size:14px}.catalog-table th,.catalog-table td{padding:15px 12px}.catalog-table th:nth-child(1){width:88px}.catalog-table th:nth-child(2){width:28%}.catalog-table th:nth-child(4){width:110px}.catalog-table th:nth-child(5){width:112px}.catalog-table .content-title{font-size:14px}.catalog-table .platform-links{gap:5px}.catalog-table .platform-links a{font-size:11px}.filters{flex-wrap:wrap}.filter-foot{margin-left:auto}}
+@media(max-width:760px){.milestone-date .date-note{max-width:none}.analysis-section h6{font-size:15px}}

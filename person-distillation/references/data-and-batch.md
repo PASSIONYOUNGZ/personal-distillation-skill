@@ -23,6 +23,8 @@ sources至少platform、发布id、url及所属账号source_id；没有稳定账
 
 cards文本类型：summary、what、use、workflow、thinking、limit/limits、directions、score_reason、result接受字符串或纯字符串数组；数组表示有序段落，构建HTML和Markdown时统一用双换行连接，不打印Python列表表示。learning是并列学习点，推荐直接写字符串数组；兼容单个字符串并转为单项数组，空值时可从workflow逐项取得。可选字段None视空；不接收嵌套数组、对象或数字混排。item_id、level仍为字符串，evidence仍为来源对象数组。直接维护output/reader-data.json时使用规范字符串字段与learning数组，不把cards兼容形式直接传给独立渲染器。
 
+analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留为内部检索摘要，但不能拿它覆盖页面的详细小节。简单短帖可声明interpretation_kind=brief。新在线请求schema_version=3且scope.minimum_stars=3，.distill/screening.json记录初筛；quality-spec.items的comprehension为[{source_point,evidence_locator,reader_section}]，映射原作要点到实际页面小节。旧schema_version=2任务保持接续兼容，但不能把历史回执称为本轮更严格内容质量已通过。
+
 ## 正确启动与审阅命令
 
 先写原始请求，然后init，快速平台/身份索引及集中准备，不能require-ready先于初始化。
