@@ -1,14 +1,15 @@
 {
   "name": "Personal Distillation Skill",
-  "version": "2026.10.16.2",
+  "version": "2026.10.16.3",
   "invocation": "$person-distillation",
-  "skill_files": 70,
+  "skill_files": 71,
   "files": {
     ".gitattributes": "f8e3e9561ce3c7cc6af9dad6d0eccb00831b761b70b09aa4184b4382d19bdade",
     ".gitignore": "503fa4f6fd1f112ca56c5d7621d41070dbad50dcc59700963a1b03aa5cc19064",
     "AGENT_INSTALL.md": "a447ac204bd51a00169f7d83c166f42a239aa77fbd76e12a60fa198c7291e81d",
-    "CHANGELOG.md": "e332552ac9033708cbb66ac857c62a6add687a6c810ebb2aaa890c0d0f5b5b45",
+    "CHANGELOG.md": "170756e5b0c34af73f7bd58b9d22b2ef8207e778d8b12c8f35e6aba620122052",
     "dist/person-distillation-2026.10.16.2.zip": "1e30b4ecd0f5cc45a9e4ea45fab8e23b81250e8882d45a1e807f205bf1006eec",
+    "dist/person-distillation-2026.10.16.3.zip": "7e3547329ddcedb31a36d53a2a187a03b854cc05776b080f25554b1fa5f5edb5",
     "docs/cover.png": "15e1c06469961a15fcf152a13560fd0321034411f0666badb3ac0988b3f2fbab",
     "install-prompt.txt": "02f9babf8fbff918e864fc8e833879472ff0fa5eb4c85a0f0bf0e0a5240c5a34",
     "install.py": "16ed76e0d7d9e2f2f4618639dc1a1751d7735be42d29687add2a6f417e258553",
@@ -21,7 +22,7 @@
     "person-distillation/assets/feishu-cli.example.json": "5af24815651354595a1fe97a00990e5c6070fbc63c3bcadc395299471dc2597b",
     "person-distillation/assets/project-developer-avatar.jpg": "9e373080a70a376042dc2607578187af8b965a340416833097f14fc1f0425ce4",
     "person-distillation/assets/project-developer.json": "f05a392f7937e2daec85330662094b18cd465210bdf7a9b280460e23bcd7f9c3",
-    "person-distillation/assets/reader.css": "d266a61db905a1d6233693a63043f4c5afbc9323d24e54172fcd7b022ac73499",
+    "person-distillation/assets/reader.css": "8b9e065916d99ca371187dfb75776f5c93107df3819221be5d399c233a31a835",
     "person-distillation/assets/reader.example.json": "2307e74cce2bf06f41ebf4b928f999f9edffc88f1ae95fb66c2154b796df48e0",
     "person-distillation/assets/reader.js": "a0381d30ded7d528829007befc62b5d365bb6ef829636d3f8427dcb91ca497cc",
     "person-distillation/assets/workspace-records.example.json": "97a19872afb93bce004cc4609b84846f54818fedf018dbf4ee3e287cad2f3c6f",
@@ -29,7 +30,7 @@
     "person-distillation/references/browser-recovery.md": "4ad9a850e771c7a7c598e311d20c64e4667c1be655572b2f2bf7d22eb1fd5081",
     "person-distillation/references/content-review-and-video.md": "fcac2e4be0539e2b8464d5a6417ba645e71aa18efc173f7404f27194b2944729",
     "person-distillation/references/data-and-batch.md": "59ac877aba372eb3ee6a3188a641f1cdecd75dc57ac6dee3d2d73cd3830f55f3",
-    "person-distillation/references/delivery.md": "c4a7ce1b434f17ca56d070b8537c1a4ae9ad866a36cb73f6aadf3d1b531b9a14",
+    "person-distillation/references/delivery.md": "fa5512e96f3f855bd8ba06a3d4ba158428c59fac56816d0e2a8b73ac30f89e30",
     "person-distillation/references/efficient-execution.md": "aaf84a0c8f3a2b7d9153860542c31e25a04f4df4c8444447682d7d32a9e35a6d",
     "person-distillation/references/feishu-delivery.md": "a828ca878a1fd05dbeeabd3407a343025f7ebb6a913da551884ba2ff42dedd6a",
     "person-distillation/references/intake-and-scope.md": "5707fa1dc2f784c0e3080d969db6dd6a7487fbb55422da07e855e28fd61f65fe",
@@ -64,7 +65,7 @@
     "person-distillation/scripts/preparation_gate.py": "75812a35219473cc55c75c558e47fe613113abb32d22c82e876c06e77b6d122e",
     "person-distillation/scripts/process_report.py": "e2a1cf931c0d5ab49424809af6c7c53e77eeee47d351fb218d355b5cde0218c8",
     "person-distillation/scripts/read_public_article.py": "a21969ee4856026a5f710ce6fa87fe9dc39de7f3a2d15a3867733a798a1ecbd0",
-    "person-distillation/scripts/render_reader.py": "d03891d1f5de720e2e5f5c3e10932e13953e99284d5a194406ea0e1a7e853634",
+    "person-distillation/scripts/render_reader.py": "f64ea28a94b73530aa5cce0fd9997b4916905a9dc4c9188430ba5f8f8917a229",
     "person-distillation/scripts/request_scope.py": "fbd2fcf60192f037797554fd2ea6dcd1b21b08a4e0c6836695d35dc1e7f34279",
     "person-distillation/scripts/runlog.py": "65b81988b905a445f9d019cd8c0d78a997a3681ea0adde8f925a47c50cb7d628",
     "person-distillation/scripts/scope_coverage.py": "c71a35c3b41dce6790ea93559906a9d72935014160a8054c6bc242ee6b4cb647",
@@ -75,6 +76,7 @@
     "person-distillation/scripts/test_process_report.py": "9a7b108ebeb8f0cb07c5a9dde9914e03b716dd3c5bce0611dd511ff24803c22d",
     "person-distillation/scripts/test_quality_revision.py": "8636d9de501b7d45a8771feab06f4181240d6210260dc9b2631c6d89cd196631",
     "person-distillation/scripts/test_reader_contracts.py": "d52b76ae12ece4b11a48d5dac8c68eb2a9b1d5eceb369f1877ed1a21923fe070",
+    "person-distillation/scripts/test_reader_dates_and_sources.py": "243dc3452abe3bd544e8ce430af6da65523ae4f1bfe4be27db9d49224711c185",
     "person-distillation/scripts/test_reader_interactions.js": "efddbe574646339f2477e6604d105f6f0a057b93b4151573079841385ac4afa2",
     "person-distillation/scripts/test_reader_layout.py": "536dee8a232663e07e6f56f1d256d47c6cade986c3cc09213229a89292392303",
     "person-distillation/scripts/user_access.py": "f37447ea1fbb4ad818bd13f85ee6672c01da800e229a836bdd14cdc1eeb8581d",
@@ -82,16 +84,16 @@
     "person-distillation/scripts/validate_reader.py": "91b29922d28b5e124807cf6d8df14cab0d56d6e1185cecace030e1d16460bbbb",
     "person-distillation/scripts/video_tools.py": "8b2d7e7d92d5de1f3fa04ecd9c86532ce604a7f633b7269ae4b39b67fee6c380",
     "person-distillation/SKILL.md": "ebe87a3736d13f2fccc65ab14b282c53d8fbe789a7f20cc78cdad123fa80c30a",
-    "README.md": "113cd4b04a51936c67be00f52d673110c1fd8bfe5c31633ebe272576f94ff3cc",
+    "README.md": "3ff312d7a5e6cc287ab6bbd42c98cf6194a0feee7f77461a1f338da4e07beab9",
     "repository-description.txt": "91e0d25835326046f4507780b6cc2952625fe05b7cdba0ada7423d3c5961a260",
-    "VALIDATION.md": "28140d6570c6dd24993b5181f84db090b61524d825334e6c3d4376a183c3e1f0"
+    "VALIDATION.md": "0aa6a712c156141b61be3d3bfa5b3cf3fafa59f34986faaad82bdf5c17ef08c4"
   },
   "archive": {
-    "path": "dist/person-distillation-2026.10.16.2.zip",
-    "sha256": "1e30b4ecd0f5cc45a9e4ea45fab8e23b81250e8882d45a1e807f205bf1006eec"
+    "path": "dist/person-distillation-2026.10.16.3.zip",
+    "sha256": "7e3547329ddcedb31a36d53a2a187a03b854cc05776b080f25554b1fa5f5edb5"
   },
   "tests": {
-    "python": 117,
+    "python": 122,
     "javascript": 4
   },
   "telemetry": "local files only; no uploads",

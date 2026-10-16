@@ -11,6 +11,7 @@ import math
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 from document_render import render_document
 from content_analysis import sections as analysis_sections, text as analysis_text
 
@@ -94,8 +95,35 @@ def rating(item):
     return '<span class="rating" role="img" aria-label="'+title+'" title="'+title+'">'+''.join(f'<svg aria-hidden="true" class="{("star-filled" if n < count else "star-empty")}" viewBox="0 0 24 24" fill="currentColor"><path d="{shape}"/></svg>' for n in range(5))+'</span>'
 
 
+def display_sources(item):
+    """One entry per known account in an already unified work; retain all evidence data."""
+    selected=[];seen=set()
+    for source in item['sources']:
+        platform=str(source.get('platform','')).casefold()
+        account=source.get('source_id') or source.get('account_id')
+        address=urlsplit(source.get('url',''));parts=address.path.strip('/').split('/')
+        if not account and address.hostname in ('x.com','www.x.com','twitter.com','www.twitter.com') and len(parts)>=3 and parts[1]=='status' and parts[0].lower()!='i':
+            account='x-account:'+parts[0].casefold()
+        key=(platform,str(account)) if account else ('url',source.get('url'))
+        if key in seen:continue
+        seen.add(key);selected.append(source)
+    return selected
+
+
 def sources(item):
-    return ''.join(link(s.get('label', s.get('platform', '原作')), s['url']) for s in item['sources'])
+    return ''.join(link(s.get('label', s.get('platform', '原作')), s['url']) for s in display_sources(item))
+
+
+def publication_date(value,unknown='日期未确认'):
+    """Short publication day, preserving supplied timezone/day and precision internally."""
+    value=str(value or '').strip()
+    if not value:return '<span class="date-value">'+esc(unknown)+'</span>'
+    try:
+        stamp=datetime.fromisoformat(value.replace('Z','+00:00'))
+        if not re.match(r'^\d{4}-\d{2}-\d{2}(?:$|[T ])',value):raise ValueError('Not a publication timestamp')
+    except (ValueError,OverflowError):
+        return '<span class="date-value" title="'+esc(value)+'">'+esc(value)+'</span>'
+    return '<time class="date-value" datetime="'+esc(value)+'" title="'+esc(value)+'">'+stamp.date().isoformat()+'</time>'
 
 
 def content_kind(item):
@@ -168,7 +196,7 @@ def source_links(records):
 def rows(items):
     output = []
     for item in items:
-        output.append(f'<tr data-item="{esc(item["id"])}"><td class="date-cell">{esc(item.get("date") or "日期未确认")}</td><td class="title-cell"><span class="title-content">'+link(item.get('short',item['title']),item['sources'][0]['url'],'content-title')+f'&nbsp;<a class="read-link" href="#note-{esc(item["id"])}">内容解读 {icon("arrow",13)}</a></span>'+coverage_note(item, compact=True)+f'</td><td class="summary-cell">{esc(item["summary"])}</td><td class="platform-cell"><div class="platform-links">{sources(item)}</div></td><td class="rating-cell">{rating(item)}</td></tr>')
+        output.append(f'<tr data-item="{esc(item["id"])}"><td class="date-cell">{publication_date(item.get("date"))}</td><td class="title-cell"><span class="title-content">'+link(item.get('short',item['title']),item['sources'][0]['url'],'content-title')+f'&nbsp;<a class="read-link" href="#note-{esc(item["id"])}">内容解读 {icon("arrow",13)}</a></span>'+coverage_note(item, compact=True)+f'</td><td class="summary-cell">{esc(item["summary"])}</td><td class="platform-cell"><div class="platform-links">{sources(item)}</div></td><td class="rating-cell">{rating(item)}</td></tr>')
     return ''.join(output)
 
 
@@ -221,9 +249,9 @@ def recent_content(items, base, selected_ids=None):
     for item in selected:
         picture=item['cover']
         thumb='<img src="'+image(picture,base)+'" alt="'+esc(picture['caption'])+'" loading="eager">'
-        date=item.get('date') or '日期待核'
+        date=publication_date(item.get('date'),'日期待核')
         target='#note-'+esc(item['id'])
-        cards.append('<article class="recent-card" data-recent-item="'+esc(item['id'])+'"><a class="recent-thumbnail" href="'+target+'">'+thumb+'</a><div class="recent-copy"><div class="recent-meta"><span>'+esc(date)+'</span><span>'+esc(item['sources'][0].get('platform') or item['sources'][0].get('label','原作'))+'</span></div><a class="recent-title" href="'+target+'">'+esc(item.get('short') or item['title'])+'</a><div class="recent-card-foot"><a href="'+target+'">内容解读 '+icon('arrow',12)+'</a></div></div></article>')
+        cards.append('<article class="recent-card" data-recent-item="'+esc(item['id'])+'"><a class="recent-thumbnail" href="'+target+'">'+thumb+'</a><div class="recent-copy"><div class="recent-meta"><span>'+date+'</span><span>'+esc(item['sources'][0].get('platform') or item['sources'][0].get('label','原作'))+'</span></div><a class="recent-title" href="'+target+'">'+esc(item.get('short') or item['title'])+'</a><div class="recent-card-foot"><a href="'+target+'">内容解读 '+icon('arrow',12)+'</a></div></div></article>')
     return '<section class="recent-content" aria-label="近期精选内容"><div class="recent-heading"><h2>近期精选</h2></div><div class="recent-list">'+''.join(cards)+'</div></section>'
 
 
@@ -355,7 +383,7 @@ def render(data, base):
                 thumb = f'<img class="summary-cover{(" contain" if item["cover"].get("fit")=="contain" else "")}" loading="lazy" src="{image(item["cover"],base)}" alt="{esc(item["cover"]["caption"])}">'
             opened = ' open' if first else ''
             first = False
-            chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{esc(item.get("date") or "日期未确认")}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
+            chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{publication_date(item.get("date"))}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
             for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
                 if field=='what' and item.get('analysis_sections'):
                     chunks += ['<h5>'+label+'</h5><div class="structured-analysis">']
