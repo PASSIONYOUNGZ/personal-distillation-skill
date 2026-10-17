@@ -322,7 +322,8 @@ class ReaderLayout(unittest.TestCase):
         self.assertTrue(self.one(events[0], tag='time').text())
         self.assertEqual(self.one(events[1], tag='time').text(), '2021')
         for event in events:
-            self.assertIn('2026-01-03', self.one(event, cls='milestone-publication').text())
+            self.assertFalse(event.descendants(cls='milestone-publication'))
+        self.assertEqual(self.data['profile']['timeline'][0]['published_date'], '2026-01-03')
 
     def test_legacy_document_is_not_video_or_speech_and_full_text_is_preserved(self):
         item = self.data['items'][0]

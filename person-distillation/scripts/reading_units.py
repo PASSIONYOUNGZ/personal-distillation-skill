@@ -65,9 +65,14 @@ def reading_units(data, viewpoint_limit=None):
             _text(unit.get(field), ident + '.' + field, required=True)
         for field in ('context', 'attribution'):
             if field in unit: _text(unit[field], ident + '.' + field)
+        if 'recommendation_stars' in unit:
+            rating=unit['recommendation_stars']
+            if type(rating) is not int or not 1 <= rating <= 5:
+                raise ValueError('Unit recommendation_stars must be an integer from 1 to 5: ' + ident)
+            _text(unit.get('score_reason'), ident + '.score_reason', required=True)
         unit['paragraphs'] = _paragraphs(unit.get('paragraphs', []), ident + '.paragraphs')
         unit['analysis_sections'] = sections(unit.get('analysis_sections', []))
-        if not unit['paragraphs'] and not unit['analysis_sections']:
+        if unit['kind'] == 'deep' and not unit['paragraphs'] and not unit['analysis_sections']:
             raise ValueError('Reading unit requires reviewed explanation: ' + ident)
         # Private adapter marker cannot be supplied to suppress source explanations.
         unit['_adapted'] = not explicit

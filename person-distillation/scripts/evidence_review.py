@@ -96,11 +96,12 @@ def comprehension_valid(item,review):
     card=item.get('card') or {};parts=card.get('analysis_sections') or []
     if not parts and card.get('interpretation_kind')!='brief' and card.get('reading_layer')!='viewpoint':return False
     labels={p.get('title') for p in parts} if parts else {'正文'}
+    if card.get('reading_layer')=='viewpoint':labels={'观点'}
     rows=review.get('comprehension',[])
     return bool(rows) and all(isinstance(r,dict) and r.get('source_point') and r.get('evidence_locator') and r.get('reader_section') in labels for r in rows)
 
 def review_contract(request):
-    return {'version':4 if request.get('schema_version',2)>=4 else 3 if request.get('scope',{}).get('minimum_stars',1)>1 else 2}
+    return {'version':5 if request.get('schema_version',2)>=4 else 3 if request.get('scope',{}).get('minimum_stars',1)>1 else 2}
 
 def validate_reading_inputs(data,request):
     """A valid evidence receipt cannot precede a structurally valid reading model."""
@@ -134,6 +135,9 @@ def unit_review_valid(value, review):
     if unit.get('paragraphs'):labels.add('正文')
     if unit.get('context','').strip():labels.add('背景')
     if unit.get('attribution','').strip():labels.add('归属')
+    # Compact viewpoints publish the reviewed statement, not the old analysis
+    # fields. A receipt must map to text the reader can actually see.
+    if unit.get('kind')=='viewpoint':labels={'观点'}
     rows=review.get('comprehension',[])
     return (checks_valid(review.get('checks')) and bool(rows) and
             all(isinstance(r,dict) and r.get('item_id') in unit['item_ids'] and r.get('source_point') and

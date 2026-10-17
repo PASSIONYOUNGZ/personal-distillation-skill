@@ -43,7 +43,7 @@ def document_parts(document):
     return rows
 
 
-def material_parts(item):
+def material_parts(item, folded=True):
     """Original documents and raw/corrected speech already resolved by the bridge."""
     rows=[];seen=set()
     for entry in [*item.get('documents',[]),*item.get('transcripts',[])]:
@@ -65,7 +65,8 @@ def material_parts(item):
             for paragraph in entry.get('paragraphs',[]):
                 if paragraph.get('time'):body+=['**'+str(paragraph['time'])+'**','']
                 body+=[paragraph.get('text',''),'']
-        rows+=_fold(title,body)
+        if entry.get('source_url'):body+=['[查看来源]('+entry['source_url']+')','']
+        rows+=_fold(title,body) if folded else ['**'+title+'**','',*body]
     return rows
 
 
@@ -90,6 +91,9 @@ def archive_parts(data, link, cards=None, corrections=None):
     def normalized(text):return re.sub(r'\s+','',str(text))
     for item in data['items']:
         card=cards.get(item['id'],item);unit=assigned.get(item['id'])
+        if unit and unit['kind']=='viewpoint':
+            rows+=correction_parts((corrections or {}).get(item['id']),link)
+            continue
         covered=[]
         if unit:
             covered=[unit['summary'],*unit['paragraphs']]
@@ -127,6 +131,19 @@ def parts(data,link):
         chosen=[u for u in units if u['kind']==kind]
         if not chosen:continue
         rows+=['## '+title,'']
+        if kind=='viewpoint':
+            for topic in dict.fromkeys(u['topic'] for u in chosen):
+                rows+=['### '+topic,'']
+                for unit in chosen:
+                    if unit['topic']!=topic:continue
+                    rows+=[unit['summary'],'']
+                    body=[]
+                    for ident in unit['item_ids']:
+                        item=by_id[ident]
+                        body+=material_parts(item,folded=False)
+                        body+=['来源：'+'；'.join(link(s.get('label') or s.get('platform','原作'),s['url']) for s in item['sources']),'']
+                    rows+=_fold('查看原文',body)
+            continue
         for unit in chosen:
             rows+=['### '+unit['title'],'',unit['summary'],'']
             for key in ('context','attribution'):

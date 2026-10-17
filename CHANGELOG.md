@@ -1,5 +1,15 @@
 # Updates
 
+## 2026.10.17.1
+
+- Tighten editorial screening: three stars require a concrete, useful distinction, process or example already supported by the source. Generic slogans, unresolved questions and unsupported complaints do not become valuable through invented interpretation.
+- Explain deep works from people, object and context through actual actions, examples and outcomes. Restore dates, ratings and aligned disclosure controls; avoid repeating the same source interpretation in a second panel.
+- Group selected viewpoints by topic. Show a clear statement; expand only preserved original text and source links. Retain attribution in the statement and separate quoted authors in the original material.
+- Remove delayed heading fade/translation that caused entry flashes. Keep timeline motion visibility-aware. Remove process chatter from scope and redundant evidence microcopy from the timeline without deleting underlying evidence.
+- Align HTML and Markdown, source-text validation and review templates. Schema 4 quality contract is now 5: visible viewpoint statements require fresh review mappings; hidden analysis is not an acceptable substitute. Legacy scope contracts remain compatible.
+- 194 Python tests and 6 JavaScript logic tests pass in source and extracted ZIP; 84 source/project/global/ZIP file hashes match. Existing supplied material was re-reviewed and narrowed by quality. No new online collection, browser pixel QA or speed benchmark is claimed.
+
+
 ## 2026.10.16.4
 
 - Separate source works, deep/viewpoint reading units and grounded cross-work methods. Preserve unique work counts, source anchors, original material and legacy readers; filter maps and reading units together.

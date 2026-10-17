@@ -28,10 +28,10 @@ analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}
 可选`.distill/reading-units.json`是阅读单元对象数组，结构见[reader-data](reader-data.md)。每份入选来源在一个主要单元中出现，聚合不改变作品计数；完整来源卡继续保留。quality-spec另加unit_reviews：
 
 ```json
-{"unit_reviews":[{"unit_id":"view-a","checks":[{"claim":"据本次原作核实的聚合判断","evidence_locator":"材料与实际段落位置","status":"qualified"}],"comprehension":[{"item_id":"source-a","source_point":"来源中的具体判断","evidence_locator":"原文位置","reader_section":"正文"}]}]}
+{"unit_reviews":[{"unit_id":"view-a","checks":[{"claim":"据本次原作核实的聚合判断","evidence_locator":"材料与实际段落位置","status":"qualified"}],"comprehension":[{"item_id":"source-a","source_point":"来源中的具体判断","evidence_locator":"原文位置","reader_section":"观点"}]}]}
 ```
 
-每个单元的所有item_ids都需至少一个实际要点映射；reader_section为真实analysis_sections标题或正文/背景/归属。只填checks标签不能代替理解。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
+每个单元的所有item_ids都需至少一个实际要点映射；deep的reader_section为真实analysis_sections标题或正文/背景/归属，viewpoint必须为“观点”，对应实际常显summary，不能映射到不再展示的分析段。只填checks标签不能代替理解。schema 4请求的质量合同现为5，旧4合同回执需重新核清实际阅读表达后接受；旧schema 2/3范围与合同保持兼容。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
 
 避免手拼当前request、material_refs或小节名，可先生成待填草稿：
 

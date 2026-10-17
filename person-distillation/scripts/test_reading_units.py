@@ -37,6 +37,28 @@ def fixture():
 
 
 class ReadingArchitecture(unittest.TestCase):
+    def test_viewpoint_needs_a_clear_statement_not_a_second_analysis(self):
+        data=fixture();unit=data['reading_units'][1]
+        unit.update(paragraphs=[],analysis_sections=[])
+        self.assertEqual(reading_units(data)[1]['summary'],unit['summary'])
+        unit['summary']=' '
+        with self.assertRaisesRegex(ValueError,'summary'):reading_units(data)
+
+    def test_explicit_unit_rating_needs_its_own_editorial_reason(self):
+        data=fixture();unit=data['reading_units'][0]
+        unit['recommendation_stars']=4
+        with self.assertRaisesRegex(ValueError,'score_reason'):reading_units(data)
+        unit['score_reason']='Specific mechanism and an example support this priority.'
+        self.assertEqual(reading_units(data)[0]['recommendation_stars'],4)
+        unit['recommendation_stars']=True
+        with self.assertRaisesRegex(ValueError,'recommendation_stars'):reading_units(data)
+
+    def test_invalid_original_link_fails_validation_before_rendering(self):
+        data=fixture()
+        data['items'][0]['documents']=[{'title':'Original','note':'Original author text',
+            'source_url':'javascript:alert(1)','document':{'format':'text','text':'Original words.'}}]
+        self.assertTrue(any('original source URL' in error for error in validate(data,ROOT/'assets')))
+
     def test_legacy_is_not_classified_by_length_or_medium(self):
         data = fixture(); del data['reading_units']
         self.assertIsNone(reading_units(data))

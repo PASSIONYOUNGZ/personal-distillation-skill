@@ -16,15 +16,17 @@ def draft(workspace,kind,changed_only=False):
     rows=[]
     for ident,value in data['items'].items():
         if changed_only and reusable and previous.get('item_fingerprints',{}).get(ident)==fingerprint(value):continue
-        parts=(value.get('card') or {}).get('analysis_sections',[])
+        card=value.get('card') or {};parts=card.get('analysis_sections',[])
+        labels=['观点'] if card.get('reading_layer')=='viewpoint' else [p['title'] for p in parts] or ['正文']
         rows.append({'item_id':ident,'material_refs':[m.get('material_id') or m['file'] for m in value['catalog'].get('materials',[]) if m.get('file')],
                      'coverage':'','remaining_gap':'','checks':[],
-                     'comprehension':[{'source_point':'','evidence_locator':'','reader_section':p['title']} for p in parts] or [{'source_point':'','evidence_locator':'','reader_section':'正文'}]})
+                     'comprehension':[{'source_point':'','evidence_locator':'','reader_section':label} for label in labels]})
     result={'items':rows}
     if not changed_only or not reusable or previous.get('person_fingerprint')!=person_fingerprint(data):result['person_claims']=[]
     for ident,value in unit_inputs(data).items():
         if changed_only and reusable and previous.get('unit_fingerprints',{}).get(ident)==fingerprint(value):continue
         unit=value['unit'];label=unit.get('analysis_sections',[{}])[0].get('title') if unit.get('analysis_sections') else '正文' if unit.get('paragraphs') else '背景' if unit.get('context') else '归属'
+        if unit.get('kind')=='viewpoint':label='观点'
         result.setdefault('unit_reviews',[]).append({'unit_id':ident,'checks':[],
             'comprehension':[{'item_id':i,'source_point':'','evidence_locator':'','reader_section':label} for i in unit['item_ids']]})
     result['next_action']='Read sources, explain main points and attribution, then fill evidence checks. Empty drafts are intentionally not accepted as reviewed.'

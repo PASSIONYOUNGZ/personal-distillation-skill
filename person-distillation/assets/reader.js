@@ -21,6 +21,7 @@ function filter(){
   const matching=new Set();
   document.querySelectorAll('tr[data-item]').forEach(row=>{const d=row.dataset,match=(!query||d.search.includes(query))&&(!selectedTopic||d.topic===selectedTopic)&&(!selectedStars.size||selectedStars.has(d.stars))&&(!selectedLayer||d.layer===selectedLayer);row.hidden=!match;if(match)matching.add(d.item);});
   readingUnits.forEach(unit=>unit.hidden=!unit.dataset.sourceIds.split(' ').some(id=>matching.has(id)));
+  document.querySelectorAll('.viewpoint-group').forEach(group=>group.hidden=![...group.querySelectorAll('.reading-unit')].some(unit=>!unit.hidden));
   count=matching.size;
   document.querySelectorAll('.layer-empty').forEach(note=>note.hidden=[...note.parentElement.querySelectorAll('.reading-unit')].some(unit=>!unit.hidden));
  }else{
@@ -99,8 +100,9 @@ document.querySelector('#palette-close').addEventListener('click',()=>paletteDia
 paletteDialog.addEventListener('click',e=>{if(e.target===paletteDialog){const r=paletteDialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)paletteDialog.close();}});
 paletteDialog.addEventListener('close',()=>paletteOpen.focus());
 const modal=document.querySelector('#image-dialog');let lastImage=null;document.querySelectorAll('img[data-enlarge]').forEach(img=>{img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','放大图片：'+img.alt);function enlarge(){lastImage=img;modal.querySelector('img').src=img.src;modal.querySelector('img').alt=img.alt;modal.showModal();}img.addEventListener('click',enlarge);img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();enlarge();}});});modal.querySelector('button').addEventListener('click',()=>modal.close());modal.addEventListener('click',e=>{if(e.target===modal)modal.close();});modal.addEventListener('close',()=>lastImage?.focus());
-const nav=document.querySelectorAll('.rail nav a');if('IntersectionObserver'in window){const observer=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)nav.forEach(a=>{const yes=a.hash==='#'+e.target.id;a.classList.toggle('active',yes);if(yes)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');});});},{rootMargin:'-8% 0px -74% 0px'});document.querySelectorAll('section[id]').forEach(s=>observer.observe(s));
- if(!matchMedia('(prefers-reduced-motion: reduce)').matches){const once=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('enter-once');once.unobserve(e.target);}}),{threshold:.08});document.querySelectorAll('.section-head,.trait,.showcase-card').forEach(el=>once.observe(el));}}
+// Content stays visible while scrolling. Adding a fade-in only after the
+// intersection callback made an already painted heading suddenly dim and move.
+const nav=document.querySelectorAll('.rail nav a');if('IntersectionObserver'in window){const observer=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)nav.forEach(a=>{const yes=a.hash==='#'+e.target.id;a.classList.toggle('active',yes);if(yes)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');});});},{rootMargin:'-8% 0px -74% 0px'});document.querySelectorAll('section[id]').forEach(s=>observer.observe(s));}
 const backtop=document.querySelector('.backtop');function updateBacktop(){backtop.hidden=window.scrollY<500;}window.addEventListener('scroll',updateBacktop,{passive:true});updateBacktop();filter();
 
 // Prefer complete sentences on separate lines when the existing line count is preserved.

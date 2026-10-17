@@ -23,15 +23,12 @@
 ```json
 [{"id":"a-stable-unit","kind":"viewpoint","item_ids":["source-a","source-b"],
   "title":"具体观点","topic":"实际主题","summary":"简要交代这个观点。",
-  "context":"必要问题背景；无独立信息时省略。",
-  "attribution":"引用别人的观点时说明归属；不是把引用者当原作者。",
-  "paragraphs":["完整解释观点的含义、理由或实际例子。"],
-  "analysis_sections":[{"title":"材料支持的具体小节","paragraphs":["有信息的解释；不凑模块。"]}]}]
+  "paragraphs":[],"analysis_sections":[]}]
 ```
 
-id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/summary非空；paragraphs和analysis_sections至少一个有实际解释。小节标题按原作内容组织，背景/归属/小节不强制全部填写。显式单元正文另做语义审阅与来源要点映射，不能凭通过结构校验就称内容质量足够。旧数据没有units和reading_layer时原样走旧“内容解读”路径；一旦选择逐项reading_layer适配，所有已选作品都须明确分层，不能让缺字段项目被猜测或静默消失。显式units为权威阅读组织，仍保留item中的原始字段与扩展审阅信息。
+id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/summary非空。deep的paragraphs和analysis_sections至少一个有实际解释，新任务用analysis_sections；viewpoint的summary就是完整可读观点，通常一两句，必要背景/归属自然写在其中，不要求另写分析。context/attribution/paragraphs/analysis_sections旧字段仍保留数据，但观点阅读区不再展开这些分析。显式单元正文另做语义审阅与来源要点映射，不能凭通过结构校验就称内容质量足够。旧数据没有units和reading_layer时原样走旧“内容解读”路径；一旦选择逐项reading_layer适配，所有已选作品都须明确分层。显式units为权威阅读组织，仍保留item中的原始字段与扩展审阅信息。
 
-显式单元展示顺序为“深度内容解读→精选观点”。深读使用可展开卡片；观点用紧凑段落列表，不把短论点拉成长篇空卡或机械教程。聚合单元按原样保留引用的全部item_ids；每篇已审正文和原始材料在单元下折叠可查。单篇显式layer适配直接显示已有审阅正文，避免重复一份相同正文。原有`#note-作品ID`锚点保持可用；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
+显式单元展示顺序为“深度内容解读→精选观点”。深读使用带日期、五星与统一右侧控件的可展开卡片；单来源沿用其评星，多来源可填recommendation_stars与score_reason，未审总评则逐来源显示，不算平均分。观点按topic首次出现顺序分组，组内保持原顺序，常显只有summary与“查看原文”控件。展开仅显示items.documents里的准确原文及来源；保留文件中旧分析但不混入原文。documents条目沿用title/note/document，可加author和source_url说明原作者与对应原链；主帖、续帖与引用分别标明。没有原文的旧数据只显示原链，不能把what当原文；新任务取得短帖正文时同时保存用于展示的documents，不默认设source_link_only。逐字稿兼容transcripts。原有`#note-作品ID`锚点仍可打开对应单元；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
 
 主题、精确星级、关键词与阅读层筛选取交集，以来源作品为基准；任一来源命中时展示所属聚合单元，保留单元的完整上下文。地图计数明确为“项作品”，不把命中的作品数说成观点数。作品主题和单元主题可不同，筛选仍按地图对应的作品主题执行。`scope.viewpoint_limit`在构建时按实际viewpoint单元数量校验，超限必须人工组织/调整，不自动截掉来源作品。
 
@@ -54,8 +51,8 @@ id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/s
 | --- | --- |
 | name/headline | 首页姓名与简明身份定位，不再追加人物简介段 |
 | intro | 旧数据兼容字段，保留已有值但新版首页默认不显示；新任务不靠换字段名重复展示简介 |
-| scope/source_summary/boundary | “本轮研读／收录”的实际集合、实际取材、原请求与阶段差异；不将选样日期写成人物活动边界。boundary保留为底稿边界记录，不再额外生成页尾声明；影响读者理解的限制在首页scope_summary说明一次，条目覆盖限制就近展示 |
-| scope_summary | 首页常显的一条简短范围说明，通常桌面1—2行：数量或时间、实际取材平台及影响理解的阶段缺口；完整scope/source_summary折叠在“范围与来源”。不硬截断、不删会误导完整性的限制，也不把过程解释塞进首页 |
+| scope/source_summary/boundary | scope/source_summary只补读者需要的实际范围与取材，不包含过程说明；没有增量时不生成折叠。boundary存内部边界、原请求差异及研究过程，不生成页尾声明 |
+| scope_summary | 首页只常显实际数量、时间和取材平台的一条短范围；必要缺口简短说明，删减集合不能冒充完成最近N项。时区转换、去重细则、预览/调试阶段留底稿 |
 | accounts | 已核人物主页的label/url |
 | biography | 人物介绍数组，兼容旧结构；新任务只放一个无title对象，以text一段概括角色、代表实践和有依据特点，sources集中列label/url，可选items指向实例。highlights为text中少量原样短语数组，用于重点身份/实践加粗，不加新事实，不整段加粗。年份与转折交timeline，不分小节复述履历 |
 | avatar | 人物已核账号头像：path、caption、url或account_url、platform、observed_at、selection_reason；与制作人头像、作品主图区分 |

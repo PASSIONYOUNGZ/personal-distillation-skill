@@ -12,8 +12,9 @@ def validate(data,base):
     if not isinstance(items,list) or any(not isinstance(i,dict) for i in items):return ['Items must be an object list']
     if not items:errors.append('No reviewed items')
     base=Path(base)
-    for key in ('name','headline','scope','boundary','source_summary'):
+    for key in ('name','headline','scope','boundary'):
         if not isinstance(p.get(key),str) or not p[key].strip():errors.append('Missing profile '+key)
+    if 'source_summary' in p and not isinstance(p['source_summary'],str):errors.append('Invalid profile source_summary')
     if p.get('intro') is not None and not isinstance(p['intro'],str):errors.append('Invalid optional profile intro')
     ids=[i.get('id') for i in items]
     if len(ids)!=len(set(ids)) or any(not isinstance(i,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',i) for i in ids):errors.append('Invalid/duplicate item IDs')
@@ -50,6 +51,7 @@ def validate(data,base):
             if field in item and not isinstance(item[field],list):errors.append(ident+': invalid '+field)
         for t in item.get('transcripts',[])+item.get('documents',[]):
             if not t.get('title') or not t.get('note'):errors.append(ident+': source label missing')
+            if 'source_url' in t and not url(t['source_url']):errors.append(ident+': invalid original source URL')
             if t.get('type')=='document' or 'document' in t:
                 try:
                     from document_render import render_document
@@ -149,7 +151,9 @@ def inspect_html(data,body):
         if sorted(h.cards)!=sorted(ids) or h.opened!=[ordered[0]['id']]:errors.append('Card set/default disclosure differs')
     else:
         by_id={item['id']:item for item in data['items']}
-        unit_order=[unit for kind in ('deep','viewpoint') for unit in units if unit['kind']==kind]
+        deep=[unit for unit in units if unit['kind']=='deep']
+        views=[unit for unit in units if unit['kind']=='viewpoint']
+        unit_order=deep+[unit for topic in dict.fromkeys(u['topic'] for u in views) for unit in views if unit['topic']==topic]
         if h.units!=[unit['id'] for unit in unit_order] or sorted(h.source_anchors)!=sorted(ids):errors.append('Reading unit/source anchor set differs')
         if h.unit_opened!=[unit['id'] for unit in units if unit['kind']=='deep'][:1]:errors.append('Reading unit default disclosure differs')
         ordered=[by_id[ident] for unit in unit_order for ident in unit['item_ids']]
@@ -160,10 +164,15 @@ def inspect_html(data,body):
     required_text=[]
     if units is not None:
         for unit in units:
+            if unit['kind']=='viewpoint':
+                required_text.append(unit['summary'])
+                continue
             required_text.extend([unit['title'],unit['summary'],*unit['paragraphs']])
             required_text.extend(unit.get(field,'') for field in ('context','attribution'))
             for row in unit['analysis_sections']:required_text.extend([row['title'],*row['paragraphs']])
+        deep_ids={ident for unit in units if unit['kind']=='deep' for ident in unit['item_ids']}
         for item in data['items']:
+            if item['id'] not in deep_ids:continue
             if item.get('analysis_sections'):
                 from content_analysis import sections
                 for row in sections(item['analysis_sections']):required_text.extend([row['title'],*row['paragraphs']])

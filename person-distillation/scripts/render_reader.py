@@ -254,27 +254,61 @@ def source_materials(item, base):
     return ''.join(chunks)
 
 
+def viewpoint_originals(members):
+    """Show preserved original text, never substitute an interpretation for it."""
+    chunks=[]
+    for item in members:
+        documents=list(item.get('documents',[]))+list(item.get('transcripts',[]))
+        chunks+=['<div class="viewpoint-original" data-original-item="'+esc(item['id'])+'">']
+        if documents:
+            for document in documents:
+                title=document.get('title') or document.get('author') or '原文'
+                chunks+=['<div class="original-heading"><h4>'+esc(title)+'</h4>'+publication_date(item.get('date'))+'</div>']
+                if document.get('note'):chunks+=['<p class="original-note">'+esc(document['note'])+'</p>']
+                if 'paragraphs' in document and document.get('type')!='document':
+                    chunks+=['<div class="original-speech">'+''.join('<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in document['paragraphs'])+'</div>']
+                else:
+                    chunks+=['<div class="source-document">'+render_document(document.get('document',document))+'</div>']
+                if document.get('source_url'):
+                    chunks+=['<div class="original-source">'+link('查看来源',document['source_url'])+'</div>']
+            if not all(d.get('source_url') for d in documents):
+                chunks+=['<div class="sources original-source">'+sources(item)+'</div>']
+        else:
+            chunks+=['<p class="original-unavailable">原文请在来源中查看。</p><div class="sources original-source">'+sources(item)+'</div>']
+        chunks+=['</div>']
+    return ''.join(chunks)
+
+
+def unit_ratings(unit, members):
+    if 'recommendation_stars' in unit:
+        return '<div class="rating-line"><span>推荐</span>'+rating(unit)+'</div>'
+    if len(members)==1:
+        return '<div class="rating-line"><span>推荐</span>'+rating(members[0])+'</div>'
+    # An aggregate does not inherit an invented mean or the best source rating.
+    return ''.join('<div class="rating-line" title="'+esc(item['title'])+'"><span>原作'+str(n)+'</span>'+rating(item)+'</div>' for n,item in enumerate(members,1))
+
+
 def render_unit(unit, by_id, base, opened=False):
     members=[by_id[ident] for ident in unit['item_ids']]
     compact=unit['kind']=='viewpoint'
     attrs=' id="unit-'+esc(unit['id'])+'" data-unit="'+esc(unit['id'])+'" data-source-ids="'+esc(' '.join(unit['item_ids']))+'" data-layer="'+unit['kind']+'"'
     anchors=''.join('<span class="source-anchor" id="note-'+esc(i['id'])+'" data-unit-target="unit-'+esc(unit['id'])+'"></span>' for i in members)
-    tag='article' if compact else 'details'
+    if compact:
+        return '<details class="reading-unit viewpoint-card"'+attrs+'><summary><span class="viewpoint-statement">'+esc(unit['summary'])+'</span><span class="viewpoint-disclosure"><span class="label-closed">查看原文</span><span class="label-open">收起原文</span>'+icon('chevron',15)+'</span></summary><div class="viewpoint-body">'+anchors+viewpoint_originals(members)+'</div></details>'
+    tag='details'
     cover_class=' has-unit-cover' if not compact and len(members)==1 and members[0].get('cover') else ''
     chunks=['<'+tag+' class="reading-unit '+('viewpoint-card' if compact else 'content-card')+cover_class+'"'+attrs+(' open' if opened and not compact else '')+'>']
-    title='<h'+('3' if compact else '4')+'>'+esc(unit['title'])+'</h'+('3' if compact else '4')+'>'
-    if compact:chunks+=['<div class="viewpoint-heading">'+title+'</div><div class="card-body viewpoint-body">']
-    else:
-        thumb=''
-        if len(members)==1 and members[0].get('cover'):
-            pic=members[0]['cover'];thumb='<img class="unit-cover" loading="lazy" src="'+image(pic,base)+'" alt="'+esc(pic['caption'])+'">'
-        chunks+=['<summary>'+thumb+'<div class="card-heading">'+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side"><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body">']
+    title='<h4>'+esc(unit['title'])+'</h4>'
+    thumb=''
+    if len(members)==1 and members[0].get('cover'):
+        pic=members[0]['cover'];thumb='<img class="unit-cover" loading="lazy" src="'+image(pic,base)+'" alt="'+esc(pic['caption'])+'">'
+    tags='<div class="tags">'+('<span>'+publication_date(members[0].get('date'))+'</span><span class="kind-tag">'+content_kind(members[0])+'</span>' if len(members)==1 else '<span class="kind-tag">深度内容解读</span>')+'</div>'
+    chunks+=['<summary>'+thumb+'<div class="card-heading">'+tags+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side">'+unit_ratings(unit,members)+'<span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body">']
     chunks+=[anchors,'<div class="unit-source-links">'+''.join('<span>'+publication_date(i.get('date'))+' '+link(i.get('short') or i['title'],i['sources'][0]['url'])+'</span>' for i in members)+'</div>']
     if unit.get('_adapted'):
         chunks+=[source_prose(members[0])]
     else:
         chunks+=['<div class="prose unit-prose">']
-        if compact:chunks+=['<p class="viewpoint-summary">'+esc(unit['summary'])+'</p>']
         for field,label in (('context','背景'),('attribution','归属')):
             if unit.get(field):chunks+=['<div class="unit-'+field+'"><h5>'+label+'</h5>'+paragraphs(unit[field])+'</div>']
         if unit['paragraphs']:chunks+=['<div class="unit-explanation"><h5 class="sr-only">正文</h5>'+''.join(paragraphs(p) for p in unit['paragraphs'])+'</div>']
@@ -284,7 +318,12 @@ def render_unit(unit, by_id, base, opened=False):
     # aggregation never replaces or rewrites the underlying work records.
     for item in members:
         extras=source_materials(item,base)
-        if not unit.get('_adapted'):
+        same_explanation=(len(members)==1 and not unit['paragraphs'] and bool(unit['analysis_sections'])
+                          and unit['analysis_sections']==analysis_sections(item.get('analysis_sections')))
+        if not unit.get('_adapted') and same_explanation:
+            remaining={key:value for key,value in item.items() if key not in ('analysis_sections','what')}
+            chunks+=[source_prose(remaining),extras]
+        elif not unit.get('_adapted'):
             chunks+=['<details class="transcript source-record" data-source-record="'+esc(item['id'])+'">'+transcript_summary(item['title'],'查看原作解读与材料')+'<div class="transcript-body"><div class="sources">'+sources(item)+'</div><p>'+esc(item['summary'])+'</p>'+source_prose(item)+extras+'</div></details>']
         else:chunks+=[extras]
         if stars_value(item) is not None and item.get('score_reason'):
@@ -454,11 +493,8 @@ def render(data, base):
     if profile.get('timeline'):
         chunks += [heading('history','经历时间线'),'<div class="timeline">'+('<span class="timeline-flow" aria-hidden="true"></span>' if len(profile['timeline'])>1 else '')]
         for m in profile['timeline']:
-            event_date = (m.get('event_date') if 'event_date' in m else m.get('date')) or '时间待核'
-            publication = '<p class="milestone-publication">资料发表于 '+esc(m['published_date'])+'</p>' if m.get('published_date') else ''
             citations = source_links(m.get('sources',[]))+(link('查看来源',m['url']) if m.get('url') else '')
-            basis = ' · '.join(x for x in (esc(m.get('basis','')),esc(m.get('date_basis','')),citations) if x)
-            chunks += ['<article class="milestone">'+timeline_date(m)+'<div class="milestone-content"><h3>'+esc(m['title'])+'</h3>'+paragraphs(m['text'])+publication+('<div class="evidence">'+basis+'</div>' if basis else '')+'</div></article>']
+            chunks += ['<article class="milestone">'+timeline_date(m)+'<div class="milestone-content"><h3>'+esc(m['title'])+'</h3>'+paragraphs(m['text'])+('<div class="evidence">'+citations+'</div>' if citations else '')+'</div></article>']
         chunks += ['</div></section>']
     if profile.get('topic_navigation'):
         chunks += [heading('mindmap','学习主题导航'),'<div class="topic-navigation" style="--topic-columns:'+str(min(3,len(profile['topic_navigation'])))+'">']
@@ -534,9 +570,19 @@ def render(data, base):
             if not group:continue
             chunks += [heading(ident,title)]
             if kind=='deep':chunks += ['<div class="notes-controls" aria-label="当前筛选结果的解读展开控制"><span>当前筛选结果</span><button type="button" id="expand-notes">展开全部解读 '+icon('chevron',15)+'</button><button type="button" id="collapse-notes">收起全部解读 '+icon('chevron',15)+'</button></div>']
-            for unit in group:
-                chunks += [render_unit(unit,by_id,base,first)]
-                if kind=='deep':first=False
+            if kind=='viewpoint':
+                # Keep first appearance order of the reviewed topics and of units
+                # within each topic. Theme numbers agree with the source map.
+                unit_topics=list(dict.fromkeys(unit['topic'] for unit in group))
+                for topic in unit_topics:
+                    tone=themes.index(topic) if topic in themes else unit_topics.index(topic)
+                    chunks+=['<div class="viewpoint-group" data-viewpoint-topic="'+esc(topic)+'"><h3 class="viewpoint-topic" data-tone="'+str(tone%4)+'"><span class="topic-chip">'+esc(topic_heading(tone,topic))+'</span></h3>']
+                    chunks.extend(render_unit(unit,by_id,base) for unit in group if unit['topic']==topic)
+                    chunks+=['</div>']
+            else:
+                for unit in group:
+                    chunks += [render_unit(unit,by_id,base,first)]
+                    first=False
             chunks += ['<p class="layer-empty" hidden>当前筛选条件下没有'+('深度解读' if kind=='deep' else '精选观点')+'。</p></section>']
     if methods:
         chunks += [heading('methods','做事逻辑与方法'),render_methods(methods,by_id),'</section>']

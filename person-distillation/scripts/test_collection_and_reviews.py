@@ -57,7 +57,7 @@ class CollectionAndReviews(unittest.TestCase):
             self.assertFalse(quality_status(w)[0])
             with self.assertRaisesRegex(ValueError,'Reading units'):accept_quality(w,spec)
             spec['unit_reviews']=[{'unit_id':'combined','checks':copy.deepcopy(spec['items'][0]['checks']),
-                'comprehension':[{'item_id':i['id'],'source_point':'An actual synthetic example','evidence_locator':i['materials'][0]['file'],'reader_section':'正文'} for i in items]}]
+                'comprehension':[{'item_id':i['id'],'source_point':'An actual synthetic example','evidence_locator':i['materials'][0]['file'],'reader_section':'观点'} for i in items]}]
             accept_quality(w,spec);self.assertTrue(quality_status(w)[0])
             units[0]['paragraphs']=['Changed grouping claim'];write(w/'.distill/reading-units.json',units)
             self.assertFalse(quality_status(w)[0])
@@ -90,8 +90,17 @@ class CollectionAndReviews(unittest.TestCase):
             request=read(w/'request.json');request['schema_version']=4;write(w/'request.json',request)
             self.assertFalse(quality_status(w)[0]);self.assertEqual(len(draft(w,'quality',True)['items']),2)
             with self.assertRaisesRegex(ValueError,'reading_layer'):accept_quality(w,spec)
-            for card in cards:card['reading_layer']='viewpoint'
-            write(w/'.distill/cards.json',cards);accept_quality(w,spec);self.assertTrue(quality_status(w)[0])
+            for card,row in zip(cards,spec['items']):
+                card['reading_layer']='viewpoint'
+                row['comprehension'][0]['reader_section']='观点'
+            write(w/'.distill/cards.json',cards)
+            self.assertTrue(all(r['comprehension'][0]['reader_section']=='观点' for r in draft(w,'quality')['items']))
+            accept_quality(w,spec);self.assertTrue(quality_status(w)[0])
+            receipt=read(w/'.distill/quality-review.json');receipt['review_contract']={'version':4}
+            write(w/'.distill/quality-review.json',receipt)
+            self.assertFalse(quality_status(w)[0])
+            with self.assertRaisesRegex(ValueError,'missing/stale'):accept_quality(w,{'items':[]})
+            accept_quality(w,spec);self.assertTrue(quality_status(w)[0])
 
     def test_unit_review_cannot_point_to_absent_content(self):
         from evidence_review import unit_review_valid
@@ -100,6 +109,16 @@ class CollectionAndReviews(unittest.TestCase):
                 'comprehension':[{'item_id':'a','source_point':'The idea','evidence_locator':'a:1','reader_section':'背景'}]}
         self.assertFalse(unit_review_valid(value,review))
         value['unit']['context']='Actual context';self.assertTrue(unit_review_valid(value,review))
+
+    def test_viewpoint_review_cannot_approve_hidden_analysis_instead_of_statement(self):
+        from evidence_review import unit_review_valid
+        value={'unit':{'id':'view','kind':'viewpoint','item_ids':['a'],'summary':'The precise claim.',
+                       'context':'Old contextual commentary','paragraphs':['Old analysis']}}
+        review={'checks':[{'claim':'The precise claim.','status':'verified','evidence_locator':'a:1'}],
+                'comprehension':[{'item_id':'a','source_point':'The claim','evidence_locator':'a:1','reader_section':'背景'}]}
+        self.assertFalse(unit_review_valid(value,review))
+        review['comprehension'][0]['reader_section']='观点'
+        self.assertTrue(unit_review_valid(value,review))
 
     def test_local_publication_ids_are_scoped_to_account(self):
         a={'sources':[{'platform':'Blog','id':'1','source_id':'a','url':'https://example.org/a/1'}]}

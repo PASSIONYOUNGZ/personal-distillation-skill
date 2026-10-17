@@ -32,7 +32,7 @@ class MarkdownReadingTests(unittest.TestCase):
             self.assertIn('<details>',markdown)
             self.assertEqual(before,{name:distill.sha(w/name) for name in before})
 
-    def test_explicit_aggregation_keeps_uncovered_source_explanations_in_folded_appendix(self):
+    def test_viewpoint_expansion_has_originals_without_old_analysis(self):
         with test_workspace() as w:
             _,items,cards=fixture(w)
             cards[0].update(reading_layer='viewpoint',what='甲来源独立说明：三次比较之中的第二次存在不同条件。')
@@ -43,11 +43,10 @@ class MarkdownReadingTests(unittest.TestCase):
                 'paragraphs':['聚合后的主线只提取共同判断，不代表两篇来源所有细节。']}])
             distill.render(w)
             markdown=(w/'output/人物蒸馏.md').read_text(encoding='utf-8')
-            appendix=markdown.index('## 来源与完整原稿')
-            self.assertEqual(markdown.count('聚合后的主线只提取共同判断，不代表两篇来源所有细节。'),1)
+            self.assertEqual(markdown.count('两个来源共同提醒检查具体条件。'),1)
+            self.assertNotIn('聚合后的主线只提取共同判断，不代表两篇来源所有细节。',markdown)
             for card in cards:
-                self.assertEqual(markdown.count(card['what']),1)
-                self.assertGreater(markdown.index(card['what']),appendix)
+                self.assertNotIn(card['what'],markdown)
             self.assertIn((w/'materials/article.md').read_text(encoding='utf-8'),markdown)
             self.assertIn('Evidence API v2.',markdown)
 
