@@ -1,11 +1,23 @@
 """Keep explicit reading units and grounded methods in Markdown exports too."""
-from reading_units import reading_units,methods
+from reading_units import reading_units,methods,topic_order
 from html import escape
 import re
 
 
 def _fold(title, rows):
     return ['<details>', '<summary>' + escape(title) + '</summary>', '', *rows, '', '</details>', '']
+
+
+def _statement(unit):
+    """HTML inline emphasis keeps literal punctuation and source text intact."""
+    text=unit['summary'];phrases=unit.get('highlights',[])
+    if not phrases:return text
+    pattern='|'.join(re.escape(p) for p in sorted(phrases,key=len,reverse=True))
+    rows=[];start=0
+    for match in re.finditer(pattern,text):
+        rows.extend([escape(text[start:match.start()]),'<strong>'+escape(match.group())+'</strong>'])
+        start=match.end()
+    rows.append(escape(text[start:]));return '<p>'+''.join(rows)+'</p>'
 
 
 def _fence(text, language=''):
@@ -132,11 +144,12 @@ def parts(data,link):
         if not chosen:continue
         rows+=['## '+title,'']
         if kind=='viewpoint':
-            for topic in dict.fromkeys(u['topic'] for u in chosen):
+            for topic in topic_order(data['items'],units):
+                if not any(unit['topic']==topic for unit in chosen):continue
                 rows+=['### '+topic,'']
                 for unit in chosen:
                     if unit['topic']!=topic:continue
-                    rows+=[unit['summary'],'']
+                    rows+=[_statement(unit),'']
                     body=[]
                     for ident in unit['item_ids']:
                         item=by_id[ident]

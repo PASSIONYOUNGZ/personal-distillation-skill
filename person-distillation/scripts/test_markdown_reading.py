@@ -6,6 +6,19 @@ import distill
 
 
 class MarkdownReadingTests(unittest.TestCase):
+    def test_viewpoints_share_map_order_and_escape_emphasis_without_touching_originals(self):
+        from test_reader_feedback import fixture as reader_fixture
+        from markdown_reading import parts
+        data=reader_fixture();units=data['reading_units']
+        units[1].update(summary='Zara: <a> expresses a precise judgment, then gives context.',
+                        highlights=['<a> expresses a precise judgment'])
+        data['reading_units']=[units[n] for n in (0,2,1,3)]
+        body='\n'.join(parts(data,lambda label,url:'['+label+']('+url+')'))
+        self.assertLess(body.index('### Ideas'),body.index('### Other'))
+        self.assertIn('<strong>&lt;a&gt; expresses a precise judgment</strong>',body)
+        self.assertNotIn('<a> expresses',body)
+        self.assertIn('Exact original 1\nSecond original line.',body)
+
     def test_layered_pipeline_preserves_complete_article_and_both_speech_versions_once(self):
         with test_workspace() as w:
             _,_,cards=fixture(w)

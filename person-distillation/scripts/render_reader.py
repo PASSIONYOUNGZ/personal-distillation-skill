@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from document_render import render_document
 from content_analysis import sections as analysis_sections, text as analysis_text
-from reading_units import reading_units, methods as reviewed_methods
+from reading_units import reading_units, methods as reviewed_methods, topic_order, summary_highlights
 
 ASSETS = Path(__file__).resolve().parents[1] / 'assets'
 CSS = (ASSETS / 'reader.css').read_text(encoding='utf-8')
@@ -294,7 +294,8 @@ def render_unit(unit, by_id, base, opened=False):
     attrs=' id="unit-'+esc(unit['id'])+'" data-unit="'+esc(unit['id'])+'" data-source-ids="'+esc(' '.join(unit['item_ids']))+'" data-layer="'+unit['kind']+'"'
     anchors=''.join('<span class="source-anchor" id="note-'+esc(i['id'])+'" data-unit-target="unit-'+esc(unit['id'])+'"></span>' for i in members)
     if compact:
-        return '<details class="reading-unit viewpoint-card"'+attrs+'><summary><span class="viewpoint-statement">'+esc(unit['summary'])+'</span><span class="viewpoint-disclosure"><span class="label-closed">查看原文</span><span class="label-open">收起原文</span>'+icon('chevron',15)+'</span></summary><div class="viewpoint-body">'+anchors+viewpoint_originals(members)+'</div></details>'
+        statement=emphasize(unit['summary'],summary_highlights(unit['summary'],unit.get('highlights',[])))
+        return '<details class="reading-unit viewpoint-card"'+attrs+'><summary><span class="viewpoint-statement">'+statement+'</span><span class="viewpoint-disclosure"><span class="label-closed">查看原文</span><span class="label-open">收起原文</span>'+icon('chevron',15)+'</span></summary><div class="viewpoint-body">'+anchors+viewpoint_originals(members)+'</div></details>'
     tag='details'
     cover_class=' has-unit-cover' if not compact and len(members)==1 and members[0].get('cover') else ''
     chunks=['<'+tag+' class="reading-unit '+('viewpoint-card' if compact else 'content-card')+cover_class+'"'+attrs+(' open' if opened and not compact else '')+'>']
@@ -338,14 +339,18 @@ def render_methods(methods,by_id):
     for method in methods:
         chunks+=['<article class="method-card" id="method-'+esc(method['id'])+'"><h3>'+esc(method['title'])+'</h3><p class="method-summary">'+esc(method['summary'])+'</p>']
         if method.get('steps'):
-            chunks+=['<ol class="method-steps">'+''.join('<li><h4>'+esc(step['title'])+'</h4>'+paragraphs(step['text'])+'</li>' for step in method['steps'])+'</ol>']
+            chunks+=['<ol class="method-steps" data-step-count="'+str(len(method['steps']))+'">'+''.join('<li><h4>'+esc(step['title'])+'</h4>'+paragraphs(step['text'])+'</li>' for step in method['steps'])+'</ol>']
         if method.get('boundary'):chunks+=['<div class="method-boundary"><h4>适用条件</h4>'+paragraphs(method['boundary'])+'</div>']
         if method.get('counterexamples'):chunks+=['<div class="method-counterexamples"><h4>不同情况与反例</h4>'+''.join(paragraphs(p) for p in method['counterexamples'])+'</div>']
-        chunks+=['<ul class="method-evidence">']
+        # A source can support several kinds of evidence. Show its reading
+        # entry once; retain the exact notes and locators behind a disclosure.
+        source_ids=list(dict.fromkeys(entry['item_id'] for entry in method['evidence']))
+        source_links=''.join('<a href="#note-'+esc(item_id)+'">'+esc(by_id[item_id].get('short') or by_id[item_id]['title'])+' '+icon('arrow',12)+'</a>' for item_id in source_ids)
+        chunks+=['<footer class="method-support"><div class="method-source-links"><span>相关内容</span>'+source_links+'</div><details class="method-evidence-details"><summary><span class="method-evidence-open">查看依据</span><span class="method-evidence-close">收起依据</span>'+icon('chevron',12)+'</summary><ul class="method-evidence">']
         for entry in method['evidence']:
             item=by_id[entry['item_id']]
-            chunks+=['<li><span class="evidence-kind">'+labels[entry['kind']]+'</span><a href="#note-'+esc(item['id'])+'">'+esc(item.get('short') or item['title'])+' ↗</a><p>'+esc(entry['note'])+'</p><small>'+esc(entry['locator'])+'</small></li>']
-        chunks+=['</ul></article>']
+            chunks+=['<li><div class="method-evidence-heading"><span class="evidence-kind">'+labels[entry['kind']]+'</span><span>'+esc(item.get('short') or item['title'])+'</span></div><p>'+esc(entry['note'])+'</p><small>'+esc(entry['locator'])+'</small></li>']
+        chunks+=['</ul></details></footer></article>']
     return ''.join(chunks)+'</div>'
 
 
@@ -399,7 +404,8 @@ def recent_content(items, base, selected_ids=None):
 def render(data, base):
     profile, items = data['profile'], data['items']
     units=reading_units(data)
-    themes = list(dict.fromkeys(i['topic'] for i in items))
+    themes = topic_order(items)
+    reading_themes = topic_order(items, units)
     by_id = {i['id']:i for i in items}
     if len(by_id) != len(items):
         raise ValueError('Duplicate item ids')
@@ -571,11 +577,11 @@ def render(data, base):
             chunks += [heading(ident,title)]
             if kind=='deep':chunks += ['<div class="notes-controls" aria-label="当前筛选结果的解读展开控制"><span>当前筛选结果</span><button type="button" id="expand-notes">展开全部解读 '+icon('chevron',15)+'</button><button type="button" id="collapse-notes">收起全部解读 '+icon('chevron',15)+'</button></div>']
             if kind=='viewpoint':
-                # Keep first appearance order of the reviewed topics and of units
-                # within each topic. Theme numbers agree with the source map.
-                unit_topics=list(dict.fromkeys(unit['topic'] for unit in group))
+                # Shared map order also governs viewpoint groups and numbering;
+                # filtering hides groups without changing that stable sequence.
+                unit_topics=[topic for topic in reading_themes if any(unit['topic']==topic for unit in group)]
                 for topic in unit_topics:
-                    tone=themes.index(topic) if topic in themes else unit_topics.index(topic)
+                    tone=reading_themes.index(topic)
                     chunks+=['<div class="viewpoint-group" data-viewpoint-topic="'+esc(topic)+'"><h3 class="viewpoint-topic" data-tone="'+str(tone%4)+'"><span class="topic-chip">'+esc(topic_heading(tone,topic))+'</span></h3>']
                     chunks.extend(render_unit(unit,by_id,base) for unit in group if unit['topic']==topic)
                     chunks+=['</div>']

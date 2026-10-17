@@ -3,7 +3,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 import argparse,json,re
 from render_reader import stars_value
-from reading_units import reading_units,methods
+from reading_units import reading_units,methods,topic_order
 
 def validate(data,base):
     if not isinstance(data,dict):return ['Reader data must be an object']
@@ -147,13 +147,13 @@ def inspect_html(data,body):
     for table in ('theme-table','time-table'):
         if sorted(h.tables.get(table,[]))!=sorted(ids):errors.append('Map set differs: '+table)
     if units is None:
-        ordered=[i for topic in dict.fromkeys(i['topic'] for i in data['items']) for i in data['items'] if i['topic']==topic]
+        ordered=[i for topic in topic_order(data['items']) for i in data['items'] if i['topic']==topic]
         if sorted(h.cards)!=sorted(ids) or h.opened!=[ordered[0]['id']]:errors.append('Card set/default disclosure differs')
     else:
         by_id={item['id']:item for item in data['items']}
         deep=[unit for unit in units if unit['kind']=='deep']
         views=[unit for unit in units if unit['kind']=='viewpoint']
-        unit_order=deep+[unit for topic in dict.fromkeys(u['topic'] for u in views) for unit in views if unit['topic']==topic]
+        unit_order=deep+[unit for topic in topic_order(data['items'],units) for unit in views if unit['topic']==topic]
         if h.units!=[unit['id'] for unit in unit_order] or sorted(h.source_anchors)!=sorted(ids):errors.append('Reading unit/source anchor set differs')
         if h.unit_opened!=[unit['id'] for unit in units if unit['kind']=='deep'][:1]:errors.append('Reading unit default disclosure differs')
         ordered=[by_id[ident] for unit in unit_order for ident in unit['item_ids']]

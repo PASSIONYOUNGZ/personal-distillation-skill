@@ -37,6 +37,22 @@ def fixture():
 
 
 class ReadingArchitecture(unittest.TestCase):
+    def test_summary_highlights_are_optional_exact_limited_nonoverlapping_phrases(self):
+        data=fixture();unit=data['reading_units'][1]
+        unit['summary']='A specific judgment, with a concrete reason.'
+        unit['highlights']=['specific judgment']
+        before=copy.deepcopy(data)
+        self.assertEqual(reading_units(data)[1]['highlights'],['specific judgment'])
+        self.assertEqual(data,before)
+        invalid=[['missing'],['specific judgment','specific judgment'],['specific judgment','judgment'],
+                 [unit['summary']],['A','specific','judgment'],'specific judgment',[' '],[None]]
+        for phrases in invalid:
+            unit['highlights']=phrases
+            with self.subTest(phrases=phrases),self.assertRaisesRegex(ValueError,'Summary highlights'):
+                reading_units(data)
+        unit['highlights']=[]
+        self.assertEqual(reading_units(data)[1]['highlights'],[])
+
     def test_viewpoint_needs_a_clear_statement_not_a_second_analysis(self):
         data=fixture();unit=data['reading_units'][1]
         unit.update(paragraphs=[],analysis_sections=[])

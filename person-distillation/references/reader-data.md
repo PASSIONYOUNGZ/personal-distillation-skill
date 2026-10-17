@@ -87,3 +87,5 @@ python <skill>/scripts/distill.py verify --workspace <workspace>
 直接用renderer也要先检查数据。HTML已有手改时先合并再用--force；自动流程生成.proposed时不能声称正式文件已更新。缺profile/card/packet就报告可执行补项，不能静默退回简版。
 
 assets/reader.example.json是标注清楚的合成示例，头像也是合成占位图，仅供渲染验收，不能当人物证据。
+
+精选观点可在reading_units单元填写highlights：summary中1—2处原样短语数组，突出核心判断或关键区别；不改字、不插入HTML，不整段加粗，不只标人物名字。缺省仍兼容旧数据。主题分组按内容地图的统一主题顺序排列和编号；只有单元中存在的新主题追加到统一顺序末尾，筛选不重编号。方法证据完整保留数据，页面常显去重来源入口，详细note、kind与locator按需展开。

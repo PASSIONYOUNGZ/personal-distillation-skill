@@ -110,12 +110,40 @@ class ReaderFeedback(unittest.TestCase):
         self.assertIn('00:12Actual spoken sentence.',card.text())
         self.assertNotIn('old viewpoint analysis',card.text())
 
-    def test_viewpoint_topics_follow_first_appearance_and_keep_unit_order(self):
-        tree=ReaderTree(render(fixture(),ROOT/'assets')).root
+    def test_viewpoint_topics_follow_map_order_and_keep_unit_order(self):
+        data=fixture()
+        # Unit editorial order differs from the source map; source numbering wins.
+        data['reading_units']=[data['reading_units'][n] for n in (0,2,3,1)]
+        tree=ReaderTree(render(data,ROOT/'assets')).root
         groups=tree.descendants(cls='viewpoint-group')
         self.assertEqual([g.attrs['data-viewpoint-topic'] for g in groups],['Ideas','Other'])
-        self.assertEqual([g.attrs['id'] for g in groups[0].descendants(cls='reading-unit')],['unit-reading-1','unit-reading-3'])
+        self.assertEqual([g.attrs['id'] for g in groups[0].descendants(cls='reading-unit')],['unit-reading-3','unit-reading-1'])
         self.assertEqual(groups[0].descendants(cls='viewpoint-topic')[0].text(),'主题二：Ideas')
+        from validate_reader import inspect_html
+        self.assertEqual(inspect_html(data,render(data,ROOT/'assets')),[])
+
+    def test_unit_only_topics_follow_map_topics_without_number_collisions(self):
+        data=fixture();data['reading_units'][1]['topic']='Unit-only topic'
+        data['reading_units']=[data['reading_units'][n] for n in (0,1,2,3)]
+        tree=ReaderTree(render(data,ROOT/'assets')).root
+        headings=[g.descendants(cls='viewpoint-topic')[0].text() for g in tree.descendants(cls='viewpoint-group')]
+        self.assertEqual(headings,['主题二：Ideas','主题三：Other','主题四：Unit-only topic'])
+        self.assertNotIn('Unit-only topic',tree.descendants(ident='theme-table')[0].text())
+        from validate_reader import inspect_html
+        self.assertEqual(inspect_html(data,render(data,ROOT/'assets')),[])
+
+    def test_viewpoint_highlight_marks_reviewed_phrase_without_rewriting_or_markup(self):
+        data=fixture();unit=data['reading_units'][1]
+        unit['summary']='Zara says <script>alert(1)</script> is text, not executable markup.'
+        unit['highlights']=['<script>alert(1)</script> is text']
+        body=render(data,ROOT/'assets');tree=ReaderTree(body).root
+        statement=tree.descendants(ident='unit-reading-1')[0].descendants(cls='viewpoint-statement')[0]
+        self.assertEqual(statement.text(),unit['summary'])
+        self.assertEqual([n.text() for n in statement.descendants(tag='strong')],unit['highlights'])
+        self.assertNotIn('<script>alert(1)</script>',body)
+        self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;',body)
+        from validate_reader import inspect_html
+        self.assertEqual(inspect_html(data,body),[])
 
     def test_timeline_evidence_keeps_links_without_duplicate_internal_basis(self):
         data=fixture();data['profile']['timeline']=[{'event_label':'大学期间','date_note':'具体日期未知',

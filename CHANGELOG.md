@@ -1,5 +1,14 @@
 # Updates
 
+## 2026.10.17.2
+
+- Use the content map's canonical theme order for viewpoint grouping, numbering and Markdown; filtering keeps stable labels.
+- Allow one or two exact summary phrases as semantic emphasis, escaped safely and validated without changing the statement or original text. Old data remains compatible.
+- Lay out method steps according to available card width, with stacked, two-column and three-column layouts. Keep headings, conditions and narrow screens readable.
+- Deduplicate method source links and move detailed provenance into a keyboard-accessible disclosure, reducing default visual clutter without deleting evidence.
+- 201 Python tests and 6 JavaScript logic tests pass in source and extracted ZIP; 85 source/project/global/ZIP file hashes match. Existing collection text, original documents, ratings, methods and sources are preserved. Browser visual inspection was blocked by the local-file URL policy; no pixel QA or timing improvement is claimed.
+
+
 ## 2026.10.17.1
 
 - Tighten editorial screening: three stars require a concrete, useful distinction, process or example already supported by the source. Generic slogans, unresolved questions and unsupported complaints do not become valuable through invented interpretation.

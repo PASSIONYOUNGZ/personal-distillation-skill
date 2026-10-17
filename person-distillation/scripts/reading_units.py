@@ -11,6 +11,26 @@ ANCHOR = re.compile(r'[A-Za-z0-9_-]+')
 EVIDENCE_KINDS = {'observed', 'self_report', 'inference', 'quotation'}
 
 
+def topic_order(items, units=None):
+    """Source-map order is canonical; unit-only topics follow without collisions."""
+    return list(dict.fromkeys(record['topic'] for record in [*items, *(units or [])]))
+
+
+def summary_highlights(summary, phrases):
+    """Validate editorial emphasis without inventing or rewriting a statement."""
+    if not isinstance(phrases, list) or len(phrases) > 2 or any(
+            not isinstance(p, str) or not p.strip() or p not in summary for p in phrases):
+        raise ValueError('Summary highlights must be up to two exact nonempty phrases')
+    if len(phrases) != len(set(phrases)):
+        raise ValueError('Summary highlights must not repeat')
+    spans = sorted((m.start(), m.end()) for phrase in phrases for m in re.finditer(re.escape(phrase), summary))
+    if any(right[0] < left[1] for left, right in zip(spans, spans[1:])):
+        raise ValueError('Summary highlights must not overlap')
+    if phrases and sum(end-start for start,end in spans) >= len(summary.strip()):
+        raise ValueError('Summary highlights must not emphasize the whole statement')
+    return list(phrases)
+
+
 def _text(value, label, required=False):
     if not isinstance(value, str) or (required and not value.strip()):
         raise ValueError(label + ' must be ' + ('nonempty ' if required else '') + 'text')
@@ -63,6 +83,8 @@ def reading_units(data, viewpoint_limit=None):
         assigned.update(refs)
         for field in ('title', 'topic', 'summary'):
             _text(unit.get(field), ident + '.' + field, required=True)
+        if 'highlights' in unit:
+            unit['highlights'] = summary_highlights(unit['summary'], unit['highlights'])
         for field in ('context', 'attribution'):
             if field in unit: _text(unit[field], ident + '.' + field)
         if 'recommendation_stars' in unit:
