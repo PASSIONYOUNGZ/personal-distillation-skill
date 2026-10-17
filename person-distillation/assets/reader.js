@@ -2,11 +2,36 @@ document.body.classList.remove('no-script');
 const search=document.querySelector('#search'),reset=document.querySelector('#reset');
 const cards=[...document.querySelectorAll('.content-card')];
 const readingUnits=[...document.querySelectorAll('.reading-unit')];
+const disclosureBindings=[];
+// Keep native details as the no-script fallback. With scripting, only the
+// explicit right-hand control activates it; selecting prose stays harmless.
+document.querySelectorAll('.content-card > summary, .viewpoint-card > summary').forEach(summary=>{
+ const control=summary.querySelector('[data-card-disclosure]');if(!control)return;
+ const card=summary.parentElement,button=document.createElement('button');
+ button.type='button';button.className=control.className;
+ button.dataset.cardDisclosure=control.dataset.cardDisclosure;
+ button.setAttribute('aria-controls',control.dataset.cardDisclosure);
+ button.setAttribute('aria-expanded',String(card.open));
+ button.append(...control.childNodes);control.replaceWith(button);
+ summary.tabIndex=-1;summary.setAttribute('role','group');summary.dataset.controlOnly='';
+ disclosureBindings.push({card,button});
+ summary.addEventListener('click',event=>{
+  if(button.contains(event.target)){
+   event.preventDefault();card.open=!card.open;updateDisclosureControls();queueFlow();return;
+  }
+  // Preserve actual links and other controls, including keyboard activation.
+  if(event.target.closest?.('a,button,input,select,textarea,label,[contenteditable]'))return;
+  event.preventDefault();
+ });
+ const guardSummaryKey=event=>{if(event.target===summary&&(event.key==='Enter'||event.key===' '))event.preventDefault();};
+ summary.addEventListener('keydown',guardSummaryKey);summary.addEventListener('keyup',guardSummaryKey);
+});
 const layerButtons=[...document.querySelectorAll('[data-layer-filter]')];
 const starButtons=[...document.querySelectorAll('[data-star-filter]')],selectedStars=new Set();
 let selectedTopic='',selectedLayer='';
 const expandNotes=document.querySelector('#expand-notes'),collapseNotes=document.querySelector('#collapse-notes');
 function updateDisclosureControls(){
+ disclosureBindings.forEach(({card,button})=>button.setAttribute('aria-expanded',String(card.open)));
  const visible=cards.filter(card=>!card.hidden);
  if(expandNotes)expandNotes.disabled=!visible.some(card=>!card.open);
  if(collapseNotes)collapseNotes.disabled=!visible.some(card=>card.open);
@@ -14,7 +39,7 @@ function updateDisclosureControls(){
 function discloseVisible(open){cards.forEach(card=>{if(!card.hidden)card.open=open;});updateDisclosureControls();queueFlow();}
 expandNotes?.addEventListener('click',()=>discloseVisible(true));
 collapseNotes?.addEventListener('click',()=>discloseVisible(false));
-document.addEventListener('toggle',event=>{if(event.target.classList.contains('content-card'))updateDisclosureControls();},true);
+document.addEventListener('toggle',event=>{if(disclosureBindings.some(({card})=>card===event.target)||event.target.classList.contains('content-card'))updateDisclosureControls();},true);
 function filter(){
  const query=search.value.trim().toLowerCase();let count=0;
  if(readingUnits.length){
@@ -63,7 +88,7 @@ reset.addEventListener('click',clearFilters);
 const tabs=[...document.querySelectorAll('[data-view]')];
 function setView(button){tabs.forEach(b=>{b.setAttribute('aria-selected',String(b===button));b.tabIndex=b===button?0:-1;});document.querySelector('#theme-table').hidden=button.dataset.view!=='theme';document.querySelector('#time-table').hidden=button.dataset.view!=='time';queueFlow();}
 tabs.forEach((button,index)=>{button.addEventListener('click',()=>setView(button));button.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?tabs[0]:e.key==='End'?tabs[tabs.length-1]:tabs[(index+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];setView(next);next.focus();}});});
-function openCard(id){let card=document.getElementById(id);if(card?.dataset.unitTarget)card=document.getElementById(card.dataset.unitTarget);if(card?.classList.contains('content-card')||card?.classList.contains('reading-unit')){if(card.hidden)clearFilters();if(card.tagName!=='ARTICLE')card.open=true;return card;}}
+function openCard(id){let card=document.getElementById(id);if(card?.dataset.unitTarget)card=document.getElementById(card.dataset.unitTarget);if(card?.classList.contains('content-card')||card?.classList.contains('reading-unit')){if(card.hidden)clearFilters();if(card.tagName!=='ARTICLE')card.open=true;updateDisclosureControls();return card;}}
 function openHash(){let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}const card=openCard(id);if(card)card.scrollIntoView({block:'start'});}
 window.addEventListener('hashchange',openHash);openHash();document.querySelectorAll('a[href^="#note-"]').forEach(a=>a.addEventListener('click',()=>openCard(a.hash.slice(1))));
 const colorButtons=[...document.querySelectorAll('[data-color-preset],[data-color-value]')];

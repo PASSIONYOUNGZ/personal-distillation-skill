@@ -288,14 +288,23 @@ def unit_ratings(unit, members):
     return ''.join('<div class="rating-line" title="'+esc(item['title'])+'"><span>原作'+str(n)+'</span>'+rating(item)+'</div>' for n,item in enumerate(members,1))
 
 
+def card_disclosure(body_id, compact=False):
+    # A span preserves native details when scripting is unavailable. The reader
+    # progressively upgrades only this explicit control to a keyboard button.
+    cls='viewpoint-disclosure' if compact else 'disclosure'
+    closed,opened=('查看原文','收起原文') if compact else ('展开内容','收起内容')
+    return '<span class="'+cls+'" data-card-disclosure="'+esc(body_id)+'"><span class="label-closed">'+closed+'</span><span class="label-open">'+opened+'</span>'+icon('chevron',15 if compact else 18)+'</span>'
+
+
 def render_unit(unit, by_id, base, opened=False):
     members=[by_id[ident] for ident in unit['item_ids']]
     compact=unit['kind']=='viewpoint'
+    body_id='unit-body-'+unit['id']
     attrs=' id="unit-'+esc(unit['id'])+'" data-unit="'+esc(unit['id'])+'" data-source-ids="'+esc(' '.join(unit['item_ids']))+'" data-layer="'+unit['kind']+'"'
     anchors=''.join('<span class="source-anchor" id="note-'+esc(i['id'])+'" data-unit-target="unit-'+esc(unit['id'])+'"></span>' for i in members)
     if compact:
         statement=emphasize(unit['summary'],summary_highlights(unit['summary'],unit.get('highlights',[])))
-        return '<details class="reading-unit viewpoint-card"'+attrs+'><summary><span class="viewpoint-statement">'+statement+'</span><span class="viewpoint-disclosure"><span class="label-closed">查看原文</span><span class="label-open">收起原文</span>'+icon('chevron',15)+'</span></summary><div class="viewpoint-body">'+anchors+viewpoint_originals(members)+'</div></details>'
+        return '<details class="reading-unit viewpoint-card"'+attrs+'><summary><span class="viewpoint-statement">'+statement+'</span>'+card_disclosure(body_id,compact=True)+'</summary><div class="viewpoint-body" id="'+esc(body_id)+'">'+anchors+viewpoint_originals(members)+'</div></details>'
     tag='details'
     cover_class=' has-unit-cover' if not compact and len(members)==1 and members[0].get('cover') else ''
     chunks=['<'+tag+' class="reading-unit '+('viewpoint-card' if compact else 'content-card')+cover_class+'"'+attrs+(' open' if opened and not compact else '')+'>']
@@ -304,7 +313,7 @@ def render_unit(unit, by_id, base, opened=False):
     if len(members)==1 and members[0].get('cover'):
         pic=members[0]['cover'];thumb='<img class="unit-cover" loading="lazy" src="'+image(pic,base)+'" alt="'+esc(pic['caption'])+'">'
     tags='<div class="tags">'+('<span>'+publication_date(members[0].get('date'))+'</span><span class="kind-tag">'+content_kind(members[0])+'</span>' if len(members)==1 else '<span class="kind-tag">深度内容解读</span>')+'</div>'
-    chunks+=['<summary>'+thumb+'<div class="card-heading">'+tags+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side">'+unit_ratings(unit,members)+'<span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body">']
+    chunks+=['<summary>'+thumb+'<div class="card-heading">'+tags+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side">'+unit_ratings(unit,members)+card_disclosure(body_id)+'</div></summary><div class="card-body" id="'+esc(body_id)+'">']
     chunks+=[anchors,'<div class="unit-source-links">'+''.join('<span>'+publication_date(i.get('date'))+' '+link(i.get('short') or i['title'],i['sources'][0]['url'])+'</span>' for i in members)+'</div>']
     if unit.get('_adapted'):
         chunks+=[source_prose(members[0])]
@@ -536,7 +545,8 @@ def render(data, base):
                     thumb = f'<img class="summary-cover{(" contain" if item["cover"].get("fit")=="contain" else "")}" loading="lazy" src="{image(item["cover"],base)}" alt="{esc(item["cover"]["caption"])}">'
                 opened = ' open' if first else ''
                 first = False
-                chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{publication_date(item.get("date"))}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div><span class="disclosure"><span class="label-closed">展开内容</span><span class="label-open">收起内容</span>'+icon('chevron')+'</span></div></summary><div class="card-body"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
+                body_id='note-body-'+item['id']
+                chunks += [f'<details class="content-card{(" has-cover" if thumb else "")}" id="note-{esc(item["id"])}" data-topic="{esc(t)}" data-stars="{stars_value(item) or 0}" data-search="{esc(search_text)}"{opened}><summary>{thumb}<div class="card-heading"><div class="tags"><span>{publication_date(item.get("date"))}</span><span class="kind-tag">'+content_kind(item)+'</span>'+coverage_note(item,compact=True)+'</div><h4>'+esc(item['title'])+'</h4><p>'+esc(item['summary'])+'</p></div><div class="card-side"><div class="rating-line"><span>推荐</span>'+rating(item)+'</div>'+card_disclosure(body_id)+'</div></summary><div class="card-body" id="'+esc(body_id)+'"><div class="sources"><span>内容来源</span>'+sources(item)+'</div>'+'<div class="prose">']
                 for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
                     if field=='what' and item.get('analysis_sections'):
                         chunks += ['<h5>'+label+'</h5><div class="structured-analysis">']

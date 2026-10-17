@@ -1,5 +1,13 @@
 # Updates
 
+## 2026.10.17.3
+
+- Restrict deep interpretation and viewpoint disclosure to the explicit right-side control. Clicking or selecting the surrounding title, summary or statement no longer toggles the card.
+- Preserve keyboard activation, expanded-state information, filtered bulk actions and source/hash navigation.
+- Remove extra fixed paragraph width caps inside reading and method cards. Text follows its actual container with existing padding; the approved person introduction remains unchanged.
+- 203 Python tests and 9 JavaScript logic tests pass in source and extracted ZIP; 86 source/project/global/ZIP file hashes match. Existing data, source texts and the person-section HTML are unchanged. No browser pixel validation or performance improvement is claimed.
+
+
 ## 2026.10.17.2
 
 - Use the content map's canonical theme order for viewpoint grouping, numbering and Markdown; filtering keeps stable labels.
