@@ -1,5 +1,13 @@
 # Updates
 
+## 2026.10.19.2
+
+- Consolidate experience by purpose: reusable methods in the Skill, project preferences in project instructions, and case evidence in local records.
+- Reuse unchanged evidence and review only affected capabilities; distinguish maintenance sample tests from the user's requested research scope.
+- Clarify original-text display by reading layer, audio versus visual evidence, and the existing mobile-only table breakpoint.
+- Documentation only: three Markdown files changed. Program code, assets and tests remain identical to 2026.10.19.1; no new code regression, platform or visual run is claimed.
+
+
 ## 2026.10.19.1
 
 - Label content sources by platform, retain distinct source links and show one recommendation for each deep reading unit.

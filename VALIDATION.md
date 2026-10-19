@@ -1,15 +1,7 @@
-# Release validation · 2026.10.19.1
+# Release validation · 2026.10.19.2
 
-| Check | Result |
-| --- | --- |
-| Python suite in source and extracted ZIP | 220 passed in each copy |
-| reader.js under a synthetic DOM host | 9 passed in each copy |
-| Official Skill scaffold and references | Passed |
-| Source, project/global installation and ZIP | 89 matching file hashes |
-| Supplied Mac test collection | Reviewed against supplied complete originals; revised selection has 23 works, 20 deep units and 2 selected viewpoints |
-| Reader invariants | One recommendation per deep unit, labeled platform sources, no deep article-excerpt panels, complete retained short-post originals, original person-section HTML unchanged |
-| Semantic checks | Separate public-background research and per-viewpoint selection decisions; no refill of the original latest-30 request |
+This revision changes only SKILL.md, references/delivery.md and references/review-and-evolution.md. Independent document review checked scope, evidence handling and superseded wording. The official Skill validator and local Markdown file references pass. All 89 files match between the source, project installation, global installation and ZIP members; the ZIP CRC check passes.
 
-Structural and synthetic DOM checks do not constitute browser visual or multi-viewport validation. File-URL browser observation remains unavailable under the host tool policy; the user's screenshots informed the corrections.
+Program code, assets and test files are byte-identical to 2026.10.19.1. That version passed 220 Python and 9 JavaScript logic tests in source and extracted ZIP. Those are historical results: no code regression, new platform collection, fresh OS installation, browser visual test or speed benchmark was repeated for this documentation revision.
 
-No ASR rerun, new latest-30 collection, fresh OS installation or speed benchmark was performed. Research materials, generated reading pages, private configuration and local logs are not distributed. Only the reusable Skill, synthetic fixtures, public documentation and authorized public project credit are included.
+Project preferences, user research, private configuration and local audit records remain outside this public package. The existing authorized public project developer credit is unchanged.
