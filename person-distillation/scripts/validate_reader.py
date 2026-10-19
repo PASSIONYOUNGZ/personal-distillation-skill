@@ -2,7 +2,7 @@
 from html.parser import HTMLParser
 from pathlib import Path
 import argparse,json,re
-from render_reader import stars_value
+from render_reader import stars_value, display_sources, unit_recommendation
 from reading_units import reading_units,methods,topic_order
 
 def validate(data,base):
@@ -50,9 +50,13 @@ def validate(data,base):
         for field in ('documents','transcripts'):
             if field in item and not isinstance(item[field],list):errors.append(ident+': invalid '+field)
         for t in item.get('transcripts',[])+item.get('documents',[]):
-            if not t.get('title') or not t.get('note'):errors.append(ident+': source label missing')
+            is_document=t.get('type')=='document' or 'document' in t
+            # An explicit original URL identifies a displayed article without
+            # repeating internal acquisition notes. Speech retains its source/
+            # method note because its provenance is more than a page link.
+            if not t.get('title') or (not t.get('note') and not (is_document and url(t.get('source_url')))):errors.append(ident+': source label missing')
             if 'source_url' in t and not url(t['source_url']):errors.append(ident+': invalid original source URL')
-            if t.get('type')=='document' or 'document' in t:
+            if is_document:
                 try:
                     from document_render import render_document
                     if not render_document(t['document']):errors.append(ident+': empty document')
@@ -108,7 +112,8 @@ def validate(data,base):
     return errors
 
 class Structure(HTMLParser):
-    def __init__(self):super().__init__();self.ids=[];self.anchors=[];self.remote=[];self.tables={};self.table=None;self.cards=[];self.opened=[];self.units=[];self.unit_opened=[];self.source_anchors=[];self.speech=[];self.speech_depth=0;self.visible=[];self.hidden_depth=0;self.sections=[];self.person_text=[];self.person_links=set()
+    VOID={'area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'}
+    def __init__(self):super().__init__();self.ids=[];self.anchors=[];self.remote=[];self.tables={};self.table=None;self.cards=[];self.opened=[];self.units=[];self.unit_opened=[];self.source_anchors=[];self.speech=[];self.speech_depth=0;self.visible=[];self.hidden_depth=0;self.sections=[];self.person_text=[];self.person_links=set();self.stack=[];self.unit_content={}
     def handle_starttag(self,tag,attrs):
         a=dict(attrs);ident=a.get('id');cls=a.get('class','').split()
         if tag=='section':self.sections.append(ident)
@@ -122,17 +127,30 @@ class Structure(HTMLParser):
         if 'data-unit' in a:
             self.units.append(a['data-unit'])
             if 'open' in a:self.unit_opened.append(a['data-unit'])
+            self.unit_content[a['data-unit']]={'recommendations':0,'original_folds':0,'source_bars':0,'source_urls':set(),'urls':set()}
+        current=a.get('data-unit') or next((node.get('data-unit') for _,node in reversed(self.stack) if node.get('data-unit')),None)
+        if current:
+            content=self.unit_content[current]
+            if 'recommendation-note' in cls:content['recommendations']+=1
+            if 'source-record' in cls or 'source-article' in cls:content['original_folds']+=1
+            if 'unit-source-links' in cls:content['source_bars']+=1
+            if tag=='a' and a.get('href'):content['urls'].add(a['href'])
+            if tag=='a' and a.get('href') and any('unit-source-links' in node.get('class','').split() for _,node in self.stack):content['source_urls'].add(a['href'])
         if 'data-unit-target' in a:self.source_anchors.append(ident[5:])
         if tag=='details' and 'content-card' in cls and 'data-unit' not in a:
             self.cards.append(ident[5:])
             if 'open' in a:self.opened.append(ident[5:])
         if tag=='p' and 'speech' in cls:self.speech.append('');self.speech_depth=1
         elif self.speech_depth:self.speech_depth+=1
+        if tag not in self.VOID:self.stack.append((tag,a))
     def handle_endtag(self,tag):
         if tag=='section' and self.sections:self.sections.pop()
         if tag in ('style','script'):self.hidden_depth=max(0,self.hidden_depth-1)
         if tag=='table':self.table=None
         if self.speech_depth:self.speech_depth-=1
+        for n in range(len(self.stack)-1,-1,-1):
+            if self.stack[n][0]==tag:
+                del self.stack[n:];break
     def handle_data(self,text):
         if self.speech_depth:self.speech[-1]+=text
         if not self.hidden_depth:self.visible.append(text)
@@ -157,6 +175,16 @@ def inspect_html(data,body):
         if h.units!=[unit['id'] for unit in unit_order] or sorted(h.source_anchors)!=sorted(ids):errors.append('Reading unit/source anchor set differs')
         if h.unit_opened!=[unit['id'] for unit in units if unit['kind']=='deep'][:1]:errors.append('Reading unit default disclosure differs')
         ordered=[by_id[ident] for unit in unit_order for ident in unit['item_ids']]
+        for unit in deep:
+            members=[by_id[ident] for ident in unit['item_ids']]
+            content=h.unit_content.get(unit['id'],{})
+            if content.get('recommendations')!=int(bool(unit_recommendation(unit,members))):errors.append('Reading unit recommendation count differs: '+unit['id'])
+            if content.get('original_folds'):errors.append('Deep reading repeats original document/interpretation: '+unit['id'])
+            expected_sources={source['url'] for item in members for source in display_sources(item)}
+            if content.get('source_bars')!=1 or not expected_sources.issubset(content.get('source_urls',set())):errors.append('Deep reading platform source links missing: '+unit['id'])
+            main_sources={source['url'] for item in members for source in item['sources']}
+            evidence_sources={entry['url'] for item in members for entry in item.get('evidence',[]) if entry.get('url') and entry['url'] not in main_sources}
+            if not evidence_sources.issubset(content.get('urls',set())):errors.append('Deep reading supplementary source links missing: '+unit['id'])
     expected=[p for i in ordered for t in i.get('transcripts',[]) if t.get('type')!='document' for p in t['paragraphs']]
     compact=lambda s:re.sub(r'\s+','',s)
     if len(expected)!=len(h.speech) or any(compact(a.get('time','')+a['text'])!=compact(b) for a,b in zip(expected,h.speech)):errors.append('Transcript text/order differs')
@@ -170,7 +198,9 @@ def inspect_html(data,body):
             required_text.extend([unit['title'],unit['summary'],*unit['paragraphs']])
             required_text.extend(unit.get(field,'') for field in ('context','attribution'))
             for row in unit['analysis_sections']:required_text.extend([row['title'],*row['paragraphs']])
-        deep_ids={ident for unit in units if unit['kind']=='deep' for ident in unit['item_ids']}
+        # Explicit units carry the reviewed explanation. Source interpretations
+        # remain in data and must not be forced into a second nested reader.
+        deep_ids={ident for unit in units if unit['kind']=='deep' and unit.get('_adapted') for ident in unit['item_ids']}
         for item in data['items']:
             if item['id'] not in deep_ids:continue
             if item.get('analysis_sections'):
@@ -186,8 +216,10 @@ def inspect_html(data,body):
         text=entry if isinstance(entry,str) else entry['text']
         if compact(text) not in person_visible:errors.append('Biography text missing from person section')
         if isinstance(entry,dict) and any(s['url'] not in h.person_links for s in entry.get('sources',[])):errors.append('Biography source link missing from person section')
+    original_ids=set(ids) if units is None else {ident for unit in units if unit['kind']=='viewpoint' for ident in unit['item_ids']}
     for item in data['items']:
         if item.get('summary'):required_text.append(item['summary'])
+        if item['id'] not in original_ids:continue
         for document in item.get('documents',[])+[t for t in item.get('transcripts',[]) if t.get('type')=='document']:
             from document_render import render_document
             if render_document(document['document']) not in body:errors.append('Document text/structure differs: '+item['id'])

@@ -67,13 +67,14 @@ class ReaderFeedback(unittest.TestCase):
         card=ReaderTree(render(data,ROOT/'assets')).root.descendants(ident='unit-reading-0')[0]
         self.assertEqual(card.text().count('Distinct explanatory sequence.'),1)
         self.assertIn('A retained independent learning detail.',card.text())
-        self.assertIn('Exact original 0\nSecond original line.',card.text())
+        self.assertNotIn('Exact original 0\nSecond original line.',card.text())
         self.assertFalse(card.descendants(cls='source-record'))
-        self.assertEqual(len(card.descendants(cls='source-article')),1)
+        self.assertFalse(card.descendants(cls='source-article'))
         item['analysis_sections']=[{'title':'Another source section','paragraphs':['A different original interpretation.']}]
         card=ReaderTree(render(data,ROOT/'assets')).root.descendants(ident='unit-reading-0')[0]
-        self.assertEqual(len(card.descendants(cls='source-record')),1)
-        self.assertIn('A different original interpretation.',card.text())
+        self.assertFalse(card.descendants(cls='source-record'))
+        self.assertNotIn('A different original interpretation.',card.text())
+        self.assertEqual(item['analysis_sections'][0]['paragraphs'],['A different original interpretation.'])
 
     def test_viewpoint_is_one_statement_then_preserved_original_with_source(self):
         data=fixture();before=copy.deepcopy(data)

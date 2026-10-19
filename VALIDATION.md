@@ -1,15 +1,15 @@
-# Release validation · 2026.10.17.3
+# Release validation · 2026.10.19.1
 
 | Check | Result |
 | --- | --- |
-| Python suite in source and extracted ZIP | 203 passed in each copy |
-| Actual reader.js under a synthetic DOM host | 9 passed in each copy |
-| Official Skill scaffold and local references | Passed |
-| Project/global installation, source and ZIP | 86 matching file hashes |
-| Existing supplied collection | 16 works preserved, including 4 deep interpretations and 12 viewpoints |
-| Text preservation | All reader data and person-section HTML unchanged; original documents, methods, ratings and sources preserved |
-| Targeted regression coverage | Control-only disclosure, keyboard and expanded-state behavior, bulk/hash navigation, fluid prose width and unchanged person layout |
+| Python suite in source and extracted ZIP | 220 passed in each copy |
+| reader.js under a synthetic DOM host | 9 passed in each copy |
+| Official Skill scaffold and references | Passed |
+| Source, project/global installation and ZIP | 89 matching file hashes |
+| Supplied Mac test collection | Reviewed against supplied complete originals; revised selection has 23 works, 20 deep units and 2 selected viewpoints |
+| Reader invariants | One recommendation per deep unit, labeled platform sources, no deep article-excerpt panels, complete retained short-post originals, original person-section HTML unchanged |
+| Semantic checks | Separate public-background research and per-viewpoint selection decisions; no refill of the original latest-30 request |
 
-Windows/Python tests ran with normal filesystem permissions and isolated task/config directories. Structural and synthetic DOM tests do not constitute pixel-level or multi-viewport browser validation. The selected in-app browser file URL was rejected by the tool URL policy; no workaround was used. The user-provided screenshots informed the layout changes.
+Structural and synthetic DOM checks do not constitute browser visual or multi-viewport validation. File-URL browser observation remains unavailable under the host tool policy; the user's screenshots informed the corrections.
 
-No online collection, ASR run, fresh OS installation or end-to-end timing comparison was performed. Historical content and performance evidence remain historical. Only the reusable Skill, public documentation, synthetic fixtures and explicitly authorized public developer credit are distributed. Supplied research, reading pages and local logs are not included.
+No ASR rerun, new latest-30 collection, fresh OS installation or speed benchmark was performed. Research materials, generated reading pages, private configuration and local logs are not distributed. Only the reusable Skill, synthetic fixtures, public documentation and authorized public project credit are included.

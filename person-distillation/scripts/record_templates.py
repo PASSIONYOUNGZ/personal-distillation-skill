@@ -10,9 +10,9 @@ def draft(workspace,kind,changed_only=False):
         return {'request':request,'selected_ids':selection,'scope_as_of':request['scope'].get('as_of'),
                 'as_of':None,'timezone':request['scope'].get('timezone'),'dedup_status':'pending','dedup_evidence':[],
                 'channels':[],'next_action':'Read the actual scope boundary and fill only observed evidence. This draft cannot pass scope verification.'}
-    from evidence_review import inputs,fingerprint,person_fingerprint,unit_inputs,review_contract
+    from evidence_review import inputs,fingerprint,person_fingerprint,unit_inputs,review_contract,reusable_content_review
     data=inputs(w);previous=read(d/'quality-review.json') if (d/'quality-review.json').exists() else {}
-    reusable=request.get('schema_version',2)<4 or previous.get('review_contract')==review_contract(request)
+    reusable=reusable_content_review(previous,review_contract(request))
     rows=[]
     for ident,value in data['items'].items():
         if changed_only and reusable and previous.get('item_fingerprints',{}).get(ident)==fingerprint(value):continue
@@ -22,7 +22,15 @@ def draft(workspace,kind,changed_only=False):
                      'coverage':'','remaining_gap':'','checks':[],
                      'comprehension':[{'source_point':'','evidence_locator':'','reader_section':label} for label in labels]})
     result={'items':rows}
-    if not changed_only or not reusable or previous.get('person_fingerprint')!=person_fingerprint(data):result['person_claims']=[]
+    if not changed_only or not reusable or previous.get('person_fingerprint')!=person_fingerprint(data):
+        result['person_claims']=[]
+    if request.get('schema_version',2)>=4 and (not changed_only or not previous.get('background_review') or
+            not reusable or previous.get('person_fingerprint')!=person_fingerprint(data)):
+        profile=data.get('profile') or {}
+        result['background_review']={'coverage':'','sources':[],
+            'timeline_checks':[{'timeline_index':n,'claim':'','evidence_locator':'','status':'pending'} for n,_ in enumerate(profile.get('timeline',[]))],
+            'remaining_gap':''}
+        if not profile.get('timeline'):result['background_review']['absence_checks']=[]
     for ident,value in unit_inputs(data).items():
         if changed_only and reusable and previous.get('unit_fingerprints',{}).get(ident)==fingerprint(value):continue
         unit=value['unit'];label=unit.get('analysis_sections',[{}])[0].get('title') if unit.get('analysis_sections') else '正文' if unit.get('paragraphs') else '背景' if unit.get('context') else '归属'

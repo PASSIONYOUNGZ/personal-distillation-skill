@@ -115,6 +115,42 @@ def sources(item):
     return ''.join(link(s.get('label', s.get('platform', '原作')), s['url']) for s in display_sources(item))
 
 
+def source_platform(source):
+    """Use the platform, never a work title, as the reader-facing link label."""
+    value=str(source.get('platform') or '').strip()
+    aliases={'x':'X','twitter':'X','微博':'微博','weibo':'微博','bilibili':'Bilibili',
+             'b站':'Bilibili','小红书':'小红书','xiaohongshu':'小红书','youtube':'YouTube',
+             'github':'GitHub','微信公众号':'微信公众号','wechat':'微信公众号'}
+    if value:return aliases.get(value.casefold(),value)
+    host=(urlsplit(source.get('url','')).hostname or '').casefold().removeprefix('www.')
+    platforms={'x.com':'X','twitter.com':'X','weibo.com':'微博','weibo.cn':'微博',
+               'bilibili.com':'Bilibili','b23.tv':'Bilibili','xiaohongshu.com':'小红书',
+               'xhslink.com':'小红书','youtube.com':'YouTube','youtu.be':'YouTube',
+               'github.com':'GitHub','mp.weixin.qq.com':'微信公众号','zhihu.com':'知乎',
+               'douyin.com':'抖音','substack.com':'Substack'}
+    for domain,label in platforms.items():
+        if host==domain or host.endswith('.'+domain):return label
+    return host or '原作'
+
+
+def content_sources(members, extra_sources=()):
+    """Collapse known continuations only within a work, not distinct work versions."""
+    records=[];seen=set()
+    registered={source['url'] for item in members for source in item['sources']}
+    for item in members:
+        for source in display_sources(item):
+            if source['url'] in seen:continue
+            seen.add(source['url']);records.append(source)
+    for source in extra_sources:
+        # A document can point to a continuation already represented by the
+        # primary entry. Do not re-add that known continuation via its original.
+        # An external quotation not registered with the work stays accessible.
+        if source.get('url') and source['url'] not in seen and source['url'] not in registered:
+            seen.add(source['url']);records.append(source)
+    return '<span>内容来源：</span><span>'+'、'.join(
+        link(source_platform(source),source['url']) for source in records)+'</span>'
+
+
 def publication_date(value,unknown='日期未确认'):
     """Short publication day, preserving supplied timezone/day and precision internally."""
     value=str(value or '').strip()
@@ -219,7 +255,21 @@ def transcript_summary(title, action='查看全文'):
     return '<summary><span>'+esc(title)+'</span><span class="transcript-action"><span class="full-closed">'+action+'</span><span class="full-open">收起</span>'+icon('chevron',15)+'</span></summary>'
 
 
-def source_prose(item):
+def supplementary_sources(members):
+    """Preserve cited evidence without repeating any member's main entry."""
+    seen={source['url'] for item in members for source in item['sources']}
+    selected=[]
+    for item in members:
+        for evidence in item.get('evidence',[]):
+            target=evidence.get('url')
+            if not target or target in seen:continue
+            seen.add(target);selected.append(evidence)
+    if not selected:return ''
+    return '<div class="evidence"><span>补充来源：</span>'+'、'.join(
+        link(source.get('label') or source_platform(source),source['url']) for source in selected)+'</div>'
+
+
+def source_prose(item, include_evidence=True):
     chunks=['<div class="prose">']
     for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
         if field=='what' and item.get('analysis_sections'):
@@ -229,12 +279,12 @@ def source_prose(item):
             chunks+=['</div>']
         elif item.get(field):chunks+=['<h5>'+label+'</h5>'+paragraphs(item[field])]
     if item.get('learning'):chunks+=['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(p)+'</li>' for p in item['learning'])+'</ul>']
-    additional=[v for v in item.get('evidence',[]) if v.get('url') not in {s['url'] for s in item['sources']}]
-    if additional:chunks+=['<div class="evidence">'+''.join(link(v.get('label','补充来源'),v['url']) for v in additional if v.get('url'))+'</div>']
+    if include_evidence:chunks+=[supplementary_sources([item])]
     return ''.join(chunks)+'</div>'
 
 
 def source_materials(item, base):
+    """Deep reading retains images and speech; article originals stay in the data."""
     chunks=[]
     if item.get('images'):
         chunks+=['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
@@ -244,12 +294,10 @@ def source_materials(item, base):
     if item.get('result'):
         label='文字稿从哪里来' if any(t.get('type')!='document' for t in item.get('transcripts',[])) else '已查看的材料'
         chunks+=['<details class="transcript">'+transcript_summary(label,'查看说明')+'<div class="transcript-body">'+paragraphs(item['result'])+'</div></details>']
-    for document in item.get('documents',[]):
-        chunks+=['<details class="transcript source-article">'+transcript_summary(document.get('title','原文'))+'<div class="transcript-body">'+('<p class="transcript-note">'+esc(document['note'])+'</p>' if document.get('note') else '')+'<div class="source-document">'+render_document(document.get('document',document))+'</div></div></details>']
     for transcript in item.get('transcripts',[]):
+        if transcript.get('type')=='document':continue
         chunks+=['<details class="transcript">'+transcript_summary(transcript['title'])+'<div class="transcript-body"><p class="transcript-note">'+esc(transcript['note'])+'</p>']
-        if transcript.get('type')=='document':chunks+=['<div class="source-document">'+render_document(transcript['document'])+'</div>']
-        else:chunks+=['<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in transcript['paragraphs']]
+        chunks+=['<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in transcript['paragraphs']]
         chunks+=['</div></details>']
     return ''.join(chunks)
 
@@ -269,12 +317,12 @@ def viewpoint_originals(members):
                     chunks+=['<div class="original-speech">'+''.join('<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in document['paragraphs'])+'</div>']
                 else:
                     chunks+=['<div class="source-document">'+render_document(document.get('document',document))+'</div>']
-                if document.get('source_url'):
-                    chunks+=['<div class="original-source">'+link('查看来源',document['source_url'])+'</div>']
-            if not all(d.get('source_url') for d in documents):
-                chunks+=['<div class="sources original-source">'+sources(item)+'</div>']
         else:
-            chunks+=['<p class="original-unavailable">原文请在来源中查看。</p><div class="sources original-source">'+sources(item)+'</div>']
+            chunks+=['<p class="original-unavailable">原文请在来源中查看。</p>']
+        # Include explicit original/quotation URLs even when they are absent from
+        # the work's ordinary platform entries; never relabel them as that work.
+        originals=[{'url':d['source_url'],'platform':d.get('platform','')} for d in documents if d.get('source_url')]
+        chunks+=['<div class="sources original-source">'+content_sources([item],originals)+'</div>']
         chunks+=['</div>']
     return ''.join(chunks)
 
@@ -286,6 +334,16 @@ def unit_ratings(unit, members):
         return '<div class="rating-line"><span>推荐</span>'+rating(members[0])+'</div>'
     # An aggregate does not inherit an invented mean or the best source rating.
     return ''.join('<div class="rating-line" title="'+esc(item['title'])+'"><span>原作'+str(n)+'</span>'+rating(item)+'</div>' for n,item in enumerate(members,1))
+
+
+def unit_recommendation(unit, members):
+    """One recommendation per reading unit, without inventing an aggregate score."""
+    reason=str(unit.get('score_reason') or '').strip()
+    if not reason:
+        reasons=list(dict.fromkeys(str(item.get('score_reason') or '').strip() for item in members
+                                  if stars_value(item) is not None and str(item.get('score_reason') or '').strip()))
+        reason=' '.join(reasons)
+    return '<p class="recommendation-note"><strong>推荐理由</strong> · '+esc(reason)+'</p>' if reason else ''
 
 
 def card_disclosure(body_id, compact=False):
@@ -314,9 +372,9 @@ def render_unit(unit, by_id, base, opened=False):
         pic=members[0]['cover'];thumb='<img class="unit-cover" loading="lazy" src="'+image(pic,base)+'" alt="'+esc(pic['caption'])+'">'
     tags='<div class="tags">'+('<span>'+publication_date(members[0].get('date'))+'</span><span class="kind-tag">'+content_kind(members[0])+'</span>' if len(members)==1 else '<span class="kind-tag">深度内容解读</span>')+'</div>'
     chunks+=['<summary>'+thumb+'<div class="card-heading">'+tags+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side">'+unit_ratings(unit,members)+card_disclosure(body_id)+'</div></summary><div class="card-body" id="'+esc(body_id)+'">']
-    chunks+=[anchors,'<div class="unit-source-links">'+''.join('<span>'+publication_date(i.get('date'))+' '+link(i.get('short') or i['title'],i['sources'][0]['url'])+'</span>' for i in members)+'</div>']
+    chunks+=[anchors,'<div class="unit-source-links">'+content_sources(members)+'</div>']
     if unit.get('_adapted'):
-        chunks+=[source_prose(members[0])]
+        chunks+=[source_prose(members[0],include_evidence=False)]
     else:
         chunks+=['<div class="prose unit-prose">']
         for field,label in (('context','背景'),('attribution','归属')):
@@ -324,20 +382,17 @@ def render_unit(unit, by_id, base, opened=False):
         if unit['paragraphs']:chunks+=['<div class="unit-explanation"><h5 class="sr-only">正文</h5>'+''.join(paragraphs(p) for p in unit['paragraphs'])+'</div>']
         for row in unit['analysis_sections']:chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
         chunks+=['</div>']
-    # Original interpretations and full source representations stay reachable;
-    # aggregation never replaces or rewrites the underlying work records.
+    # The reviewed unit is the explanation. Underlying interpretations and
+    # article originals remain unchanged in data, not nested a second time.
     for item in members:
         extras=source_materials(item,base)
         same_explanation=(len(members)==1 and not unit['paragraphs'] and bool(unit['analysis_sections'])
                           and unit['analysis_sections']==analysis_sections(item.get('analysis_sections')))
         if not unit.get('_adapted') and same_explanation:
             remaining={key:value for key,value in item.items() if key not in ('analysis_sections','what')}
-            chunks+=[source_prose(remaining),extras]
-        elif not unit.get('_adapted'):
-            chunks+=['<details class="transcript source-record" data-source-record="'+esc(item['id'])+'">'+transcript_summary(item['title'],'查看原作解读与材料')+'<div class="transcript-body"><div class="sources">'+sources(item)+'</div><p>'+esc(item['summary'])+'</p>'+source_prose(item)+extras+'</div></details>']
+            chunks+=[source_prose(remaining,include_evidence=False),extras]
         else:chunks+=[extras]
-        if stars_value(item) is not None and item.get('score_reason'):
-            chunks+=['<p class="recommendation-note"><strong>'+('推荐理由' if len(members)==1 else esc(item.get('short') or item['title'])+' · 推荐理由')+'</strong> · '+esc(item['score_reason'])+'</p>']
+    chunks+=[supplementary_sources(members),unit_recommendation(unit,members)]
     chunks+=['</div></'+tag+'>']
     return ''.join(chunks)
 

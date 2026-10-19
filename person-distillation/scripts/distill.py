@@ -407,6 +407,7 @@ def verify(w):
         if not (w/'output'/file).exists() or sha(w/'output'/file)!=digest:errors.append('output requires merge '+file)
         if (w/'output'/file).with_name(Path(file).stem+'.proposed'+Path(file).suffix).exists():errors.append('Unmerged proposed output '+file)
     config=read(w/'config.json')
+    publication={'ready':True,'status':'not_applicable'}
     if 'html' in config.get('output',{}).get('formats',['html']):
         from validate_reader import validate,inspect_html
         r=w/'output/reader-data.json';h=w/'output/人物蒸馏.html'
@@ -414,6 +415,9 @@ def verify(w):
         else:
             reader_data=read(r);errors+=validate(reader_data,r.parent)
             if not errors:errors+=inspect_html(reader_data,h.read_text(encoding='utf-8'))
+            from publication_review import status as publication_status
+            publication=publication_status(w)
+            if not publication['ready']:errors.append('Published originals differ from reviewed sources; publication review missing or stale')
     scope=config.get('scope',{}).get('distillation',{})
     selection=read(data(w,'selection.json')) if data(w,'selection.json').exists() else {}
     target=scope.get('count')
@@ -440,6 +444,7 @@ def verify(w):
       'selected_items':len(delivery),'selected_by_platform':counts,'quantity_target_met':quantity_met,
       'scope_completion':coverage,'quality_review_recorded':quality_ready,'quality_review_status':quality_reason,'visual_review_recorded':visual_ready,
       'preview_check':preview,'offline_check':offline,'artifact_ready':artifact_ready,'original_request_complete':coverage['scope_supported'],
+      'publication_review':publication,
       'delivery_checks_complete':not limitations,'delivery_limitations':limitations,
       'initial_preparation_complete':preparation_passed(w),
       'ready_for_final_delivery':artifact_ready and coverage['scope_supported'],

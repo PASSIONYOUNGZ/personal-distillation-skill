@@ -2,13 +2,15 @@
 
 正式页面复用随包渲染器和样式。新项目用distill render从底稿转换，已有项目可直接维护审阅后的reader-data.json；两者必须保留全文和来源。
 
+维护阅读数据不能用固定字符数裁剪documents/transcripts。底稿保留完整来源；实际出版选择full/excerpt/link_only，摘录只取可独立理解的完整语义单元并标明摘录，不能显示半句或把摘要称为原文。独立阅读数据本身的结构检查不能证明与底稿一致；正式研究的派生变动按[data-and-batch](data-and-batch.md#出版派生原文复核)补审，标准构建无变化则无需额外步骤。
+
 ## 文件接口
 
 - config.json保存人物、范围、输出和工具；creator_file显式引用可选署名JSON，构建时导入本任务快照及头像。没有私有署名配置就用包内已授权的项目开发者公开署名，不额外问卷。
 - .distill/catalog.json为候选目录；selection.json的items为入选ID数组。发现不等于加入交付。
 - .distill/cards.json是每个入选项的审阅卡片：item_id/summary/what/use/workflow/thinking/limits/directions/evidence/level，补learning字符串数组。正文文本可用字符串或有序字符串段落数组，由统一适配转为规范字符串；learning始终转为字符串数组，详见[data-and-batch](data-and-batch.md)。此兼容只在底稿构建时处理，直接reader-data仍用下面的规范字段。
 - .distill/profile.json为下面的profile对象。biography承载整体人物背景，引用选集外来源也可以；items引用有效作品ID。directions是末尾学习建议，不生成前置“值得学”或默认关系树。数量取决于证据，不凑四特点或五经历。
-- prepare/review生成原稿和校正稿。转换器保留登记的article／project全文及transcript原稿，并附有证据的校正版；短摘要不能替代全文。文章折叠标题是“原文全文”，不能因复用文字稿组件就被标成视频。
+- prepare/review生成原稿和校正稿。转换器保留登记的article／project全文及transcript原稿，并附有证据的校正版；短摘要不能替代全文。文章记录标题可用“原文全文”，不能因复用文字稿组件就被标成视频；是否展示由阅读层决定，深读不嵌套文章原文面板。
 
 ## 阅读器字段
 
@@ -28,7 +30,7 @@
 
 id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/summary非空。deep的paragraphs和analysis_sections至少一个有实际解释，新任务用analysis_sections；viewpoint的summary就是完整可读观点，通常一两句，必要背景/归属自然写在其中，不要求另写分析。context/attribution/paragraphs/analysis_sections旧字段仍保留数据，但观点阅读区不再展开这些分析。显式单元正文另做语义审阅与来源要点映射，不能凭通过结构校验就称内容质量足够。旧数据没有units和reading_layer时原样走旧“内容解读”路径；一旦选择逐项reading_layer适配，所有已选作品都须明确分层。显式units为权威阅读组织，仍保留item中的原始字段与扩展审阅信息。
 
-显式单元展示顺序为“深度内容解读→精选观点”。深读使用带日期、五星与统一右侧控件的可展开卡片；单来源沿用其评星，多来源可填recommendation_stars与score_reason，未审总评则逐来源显示，不算平均分。观点按topic首次出现顺序分组，组内保持原顺序，常显只有summary与“查看原文”控件。展开仅显示items.documents里的准确原文及来源；保留文件中旧分析但不混入原文。documents条目沿用title/note/document，可加author和source_url说明原作者与对应原链；主帖、续帖与引用分别标明。没有原文的旧数据只显示原链，不能把what当原文；新任务取得短帖正文时同时保存用于展示的documents，不默认设source_link_only。逐字稿兼容transcripts。原有`#note-作品ID`锚点仍可打开对应单元；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
+显式单元展示顺序为“深度内容解读→精选观点”。深读使用带日期、五星与统一右侧控件的可展开卡片；单来源沿用其评星，多来源可填recommendation_stars与score_reason，未审总评则星级逐来源显示，不算平均分；推荐理由始终只有一条，优先单元score_reason，旧聚合才去重合并已有成员理由。深读顶部用“内容来源：平台”列真实原链，正文不重复嵌套来源解读或文章摘录；补充证据链接和语音稿仍保留。观点按内容地图的统一主题顺序分组，组内保持原顺序，常显只有summary与“查看原文”控件。展开仅显示items.documents里的准确原文及来源；保留文件中旧分析但不混入原文。documents条目沿用title/note/document，可加author和source_url说明原作者与对应原链；主帖、续帖与引用分别标明。没有原文的旧数据只显示原链，不能把what当原文；新任务取得短帖正文时同时保存用于展示的documents，不默认设source_link_only。逐字稿兼容transcripts。原有`#note-作品ID`锚点仍可打开对应单元；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
 
 主题、精确星级、关键词与阅读层筛选取交集，以来源作品为基准；任一来源命中时展示所属聚合单元，保留单元的完整上下文。地图计数明确为“项作品”，不把命中的作品数说成观点数。作品主题和单元主题可不同，筛选仍按地图对应的作品主题执行。`scope.viewpoint_limit`在构建时按实际viewpoint单元数量校验，超限必须人工组织/调整，不自动截掉来源作品。
 
@@ -66,7 +68,7 @@ id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/s
 
 items需id（字母数字下划线连字符）、title/short/topic/date、sources（label或platform、url及稳定ID）、summary、recommendation_stars（1—5或null）、score_reason、what、learning数组、limit。summary在页面叫“内容简介”，通常1—3句具体说明原作对象、问题与动作／观点；推荐理由另写。short是保留核心辨识度的导航标题，不机械截字或把长原题直接挤进窄列；原题保留title。可选result、kind、cover/images、documents、transcripts、coverage。无日期用null，视频无稿仍为kind=video。图有原作来源和准确caption，不用生成图冒充证据。
 
-documents为文章原文版本数组，type=document，document.format为text/markdown或结构化blocks；保留章节、代码、表格、链接和图片引用。transcripts为语音稿版本数组，type=transcript，title/note/paragraphs/time/text及不可变source_segments。旧transcripts中type=document的项兼容，但新数据分类型保存，不将文章当字幕。note明确实际来源、方法、覆盖和待核项；没有稿的条目不生成暗示已有全文的空组件。合并时间段只改空白，源稿文字顺序守恒。校正从原稿和edits重放，并对应raw SHA，有改动才另附完整版本；修改清单留内部并简短说明。
+documents为文章原文版本数组，type=document，document.format为text/markdown或结构化blocks；保留章节、代码、表格、链接和图片引用。transcripts为语音稿版本数组，type=transcript，title/note/paragraphs/time/text及不可变source_segments。旧transcripts中type=document的项兼容，但新数据分类型保存，不将文章当字幕。note可说明影响阅读的实际来源、方法、覆盖和待核项；文章已有明确source_url时不强制重复来源说明，采集工具诊断留底稿；没有稿的条目不生成暗示已有全文的空组件。合并时间段只改空白，源稿文字顺序守恒。校正从原稿和edits重放，并对应raw SHA，有改动才另附完整版本；修改清单留内部并简短说明。
 
 coverage可用字符串或{label,detail}，给读者有效边界，如“画面解析 · 语音待核”。它来自材料实际覆盖，不由kind=video或存在音轨推断；长诊断仍留内部。第一批正常材料就保存原文结构并核到页面的字段映射，后续增量沿同一入口，不临交付补档或额外做登录前演练。
 

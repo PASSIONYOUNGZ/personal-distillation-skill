@@ -12,7 +12,8 @@ Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚
 | catalog/selection | work_version_id、id、title、topic、date/sort_date/date_basis、sources及每发布ID/时间；候选与入选、选择/排除依据、by_platform、范围版本 |
 | materials/packets | material_id、file/format/role、作品版本、实际来源/方法/语言/分P、覆盖/视觉、原稿SHA及原文定位 |
 | cards/profile/notes | summary为具体内容简介；实际what/use/workflow/thinking/limits/directions/evidence/level、五星/理由与coverage；biography整体背景独立于作品窗口，avatar来源、经历事件与发表日期分清 |
-| quality-review | 每项checks、material_refs、coverage、remaining_gap及person_claims；由accept-quality绑定全部材料/辅助图/卡片/画像/底稿 |
+| quality-review | 每项checks、material_refs、coverage、remaining_gap及person_claims；schema4另核background_review；由accept-quality绑定全部材料/辅助图/卡片/画像/底稿 |
+| publication-review | 仅当最终reader-data改动标准构建的原文时，绑定变化项的完整来源与派生展示；full/excerpt/link_only分清，不用render-state代替审阅 |
 | scope-review | 当前归一request、as_of/固定scope_as_of、时区、selected_ids、同版与日期依据、各source_id目录证据或样本/提供集合证明 |
 | visual-review | 当前HTML SHA；preview_check记录预览状态，实际做过才附工具／视口／交互证据；offline_check独立记录。策略未执行或未测不冒充通过，实际failed不能按可交付成品放行 |
 | run-log/checkpoint | 步骤、动作、简短选择依据、耗时、产物、失败/待办/下一动作、schema/Skill版本，不留隐藏推理或凭据 |
@@ -31,7 +32,15 @@ analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}
 {"unit_reviews":[{"unit_id":"view-a","checks":[{"claim":"据本次原作核实的聚合判断","evidence_locator":"材料与实际段落位置","status":"qualified"}],"comprehension":[{"item_id":"source-a","source_point":"来源中的具体判断","evidence_locator":"原文位置","reader_section":"观点"}]}]}
 ```
 
-每个单元的所有item_ids都需至少一个实际要点映射；deep的reader_section为真实analysis_sections标题或正文/背景/归属，viewpoint必须为“观点”，对应实际常显summary，不能映射到不再展示的分析段。只填checks标签不能代替理解。schema 4请求的质量合同现为5，旧4合同回执需重新核清实际阅读表达后接受；旧schema 2/3范围与合同保持兼容。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
+每个单元的所有item_ids都需至少一个实际要点映射；deep的reader_section为真实analysis_sections标题或正文/背景/归属，viewpoint必须为“观点”，对应实际常显summary，不能映射到不再展示的分析段。只填checks标签不能代替理解。schema 4请求的质量合同现为6；旧5合同的未变源卡、单元与人物checks可复用，只补下面的独立背景审阅，不自动补造通过。旧4及更早合同需核清实际阅读表达后接受；旧schema 2/3范围与合同保持兼容。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
+
+schema4的quality-spec顶层另加background_review，防止只对作品作人物延伸却遗漏整体经历。coverage说明已探查的公开角色/阶段与边界；sources列实际所读来源及定位；timeline_checks覆盖现有timeline的每个零基索引，claim解释该节点的人物经历意义及日期依据，不只复述标题。例：
+
+```json
+{"background_review":{"coverage":"合成示例：分别读公开关于页和职业回顾，核整体角色及转变；作品范围不裁剪背景。","sources":[{"url":"https://example.org/about","evidence_locator":"materials/background.md，第2—4段"}],"timeline_checks":[{"timeline_index":0,"claim":"合成回顾说明从工程工作进入团队管理的阶段变化；年份是事件年，不是页面发布日期。","evidence_locator":"materials/background.md，第3段","status":"qualified"}],"remaining_gap":"合成示例，不代表真实履历。"}}
+```
+
+没有可证实经历节点时timeline_checks为空，但须另有absence_checks（claim/evidence_locator/status同checks）记录实际探查后为何保留空时间线；未知不能自动写verified。日期跨度、节点数和关键词不能替代这次回读。新增背景来源文件仍登记profile.background_sources以纳入哈希绑定。record_templates会留空待填；合同升级不改范围、原稿或用户编辑，只有accept-quality成功才写新回执。
 
 避免手拼当前request、material_refs或小节名，可先生成待填草稿：
 
@@ -41,6 +50,24 @@ python <skill>/scripts/record_templates.py scope --workspace <workspace> --outpu
 ```
 
 草稿只搬运已有身份/材料/小节，证据、通过状态和时间留空，不能直接accept。目标存在会停止以保护人工修改。scope草稿不制造末页、完整集合或同版已核声明。填完真实观察后才交对应命令。这个入口用于减少字段返工，不替Agent审阅。
+
+## 出版派生原文复核
+
+普通render保留标准原文，无须新增人工步骤。若出于实际展示/转载边界改变最终reader-data的documents或transcripts，则完整原稿仍保留在materials，变化项另审。不是为深读页面去掉原文组件而删除底稿；界面是否展示由渲染器决定。运行：
+
+```text
+python <skill>/scripts/publication_review.py draft --workspace <workspace> --output <new-publication-spec.json>
+python <skill>/scripts/publication_review.py accept --workspace <workspace> --input <publication-spec.json>
+python <skill>/scripts/publication_review.py status --workspace <workspace>
+```
+
+只在工作区内使用另一份阅读数据时可加`--reader-data output/other-reader-data.json`；标准verify核正式output/reader-data.json。草稿不会填通过状态；未变变化项回执可复用，来源或派生文字变化才失效。spec形如：
+
+```json
+{"items":[{"item_id":"source-a","mode":"excerpt","reason":"本次仅展示一段完整判断，完整原稿留底稿。","checks":[{"claim":"已核摘录原字、转折、条件和结论；它能独立读懂且未误示全文。","evidence_locator":"materials/a.md，第2段及最终原文展开区","status":"verified"}],"meaning_preserved":"保留了作者选择局部实现的对象、原因与限制。","omissions":"只省略随后另述的例子；不是截断判断的后半句。"}]}
+```
+
+mode=full须与标准原文文字及顺序一致；excerpt须是来源中精确片段，并人工说明保留的完整意思与省略范围；link_only须确实没有伪原文，仅来源入口，reason解释原因。full/link_only不需meaning_preserved和omissions。程序核精确文本及哈希，不能判断摘录是否完整表达作者意思；pending检查不通过，不能自动填语义结论。禁止只刷新render-state.json或写一个publication-build说明来绕过复核；verify会独立比对标准来源与最终数据。旧成品不被覆盖，旧派生发现差异则报告需补核，不静默升级。
 
 ## 正确启动与审阅命令
 

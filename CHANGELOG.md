@@ -1,5 +1,15 @@
 # Updates
 
+## 2026.10.19.1
+
+- Label content sources by platform, retain distinct source links and show one recommendation for each deep reading unit.
+- Remove redundant original-article excerpts and nested source-reading panels from deep interpretations. Viewpoint originals remain separately accessible.
+- Review overall public life history separately from the selected work window; make the background evidence coverage explicit.
+- Bind changed publication text to its original materials and a semantic review. A fixed-length fragment is not a complete quotation; unchanged source text reuses existing evidence.
+- Tighten selected-viewpoint judgment: a news announcement or weak anecdote does not become a valuable viewpoint merely because the generated commentary adds generic advice.
+- 220 Python tests and 9 JavaScript logic tests pass in source and extracted ZIP; 89 source/project/global/ZIP file hashes match. No speed or browser-pixel claim is made.
+
+
 ## 2026.10.17.3
 
 - Restrict deep interpretation and viewpoint disclosure to the explicit right-side control. Clicking or selecting the surrounding title, summary or statement no longer toggles the card.

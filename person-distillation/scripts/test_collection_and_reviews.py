@@ -95,6 +95,8 @@ class CollectionAndReviews(unittest.TestCase):
                 row['comprehension'][0]['reader_section']='观点'
             write(w/'.distill/cards.json',cards)
             self.assertTrue(all(r['comprehension'][0]['reader_section']=='观点' for r in draft(w,'quality')['items']))
+            from test_background_publication_review import background
+            spec['background_review']=background(read(w/'.distill/profile.json'))
             accept_quality(w,spec);self.assertTrue(quality_status(w)[0])
             receipt=read(w/'.distill/quality-review.json');receipt['review_contract']={'version':4}
             write(w/'.distill/quality-review.json',receipt)

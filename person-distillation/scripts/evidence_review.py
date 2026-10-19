@@ -101,7 +101,36 @@ def comprehension_valid(item,review):
     return bool(rows) and all(isinstance(r,dict) and r.get('source_point') and r.get('evidence_locator') and r.get('reader_section') in labels for r in rows)
 
 def review_contract(request):
-    return {'version':5 if request.get('schema_version',2)>=4 else 3 if request.get('scope',{}).get('minimum_stars',1)>1 else 2}
+    return {'version':6 if request.get('schema_version',2)>=4 else 3 if request.get('scope',{}).get('minimum_stars',1)>1 else 2}
+
+def reusable_content_review(previous, contract):
+    # Contract 6 adds a background-specific record; unchanged contract-5
+    # item/unit/person checks remain usable. The new record is never invented.
+    return contract['version']<4 or previous.get('review_contract')==contract or (
+        contract['version']==6 and previous.get('review_contract')=={'version':5})
+
+def background_review_valid(profile, review):
+    """Require a located review of life/role coverage, not a date-span heuristic.
+
+    This checks the evidence record only. It cannot infer whether a recent
+    publication describes a genuine career transition or an ordinary update.
+    """
+    if not isinstance(review,dict):return False
+    if not all(isinstance(review.get(k),str) and review[k].strip() for k in ('coverage','remaining_gap')):return False
+    sources=review.get('sources')
+    if not isinstance(sources,list) or not sources:return False
+    if any(not isinstance(s,dict) or not re.match(r'https?://',str(s.get('url',''))) or
+           not isinstance(s.get('evidence_locator'),str) or not s['evidence_locator'].strip() for s in sources):return False
+    rows=review.get('timeline_checks')
+    if not isinstance(rows,list):return False
+    timeline=(profile or {}).get('timeline',[])
+    if len(rows)!=len(timeline):return False
+    if rows and (not checks_valid(rows) or any(type(r.get('timeline_index')) is not int for r in rows) or
+                 {r['timeline_index'] for r in rows}!=set(range(len(timeline)))):return False
+    # An empty timeline can be honest, but still requires an actual located
+    # assessment; absence of events must not silently become "reviewed".
+    if not rows and not checks_valid(review.get('absence_checks')):return False
+    return True
 
 def validate_reading_inputs(data,request):
     """A valid evidence receipt cannot precede a structurally valid reading model."""
@@ -150,7 +179,7 @@ def accept_quality(w, spec):
     request=read(w/'request.json') if (w/'request.json').exists() else {}
     validate_reading_inputs(data,request)
     contract=review_contract(request)
-    reusable=contract['version']<4 or previous.get('review_contract')==contract
+    reusable=reusable_content_review(previous,contract)
     current_hashes={i:fingerprint(v) for i,v in data['items'].items()}
     retained={r['item_id']:r for r in previous.get('items',[]) if reusable and r.get('item_id') in ids and
               previous.get('item_fingerprints',{}).get(r['item_id'])==current_hashes[r['item_id']] and checks_valid(r.get('checks'))}
@@ -172,6 +201,10 @@ def accept_quality(w, spec):
     claims=spec.get('person_claims')
     if not claims and reusable and previous.get('person_fingerprint')==phash:claims=previous.get('person_claims')
     if not checks_valid(claims):raise ValueError('Review supported person/learning claims separately')
+    background=spec.get('background_review')
+    if background is None and reusable and previous.get('person_fingerprint')==phash:background=previous.get('background_review')
+    if request.get('schema_version',2)>=4 and not background_review_valid(data.get('profile'),background):
+        raise ValueError('Review overall public background independently of the selected works: background_review needs located coverage, sources and every timeline event (or an evidenced absence)')
     units=unit_inputs(data)
     unit_hashes={i:fingerprint(v) for i,v in units.items()}
     unit_reviews={r['unit_id']:r for r in previous.get('unit_reviews',[]) if reusable and r.get('unit_id') in units and
@@ -190,6 +223,7 @@ def accept_quality(w, spec):
              'person_claims':claims,'input_fingerprint':fingerprint(data),'item_fingerprints':current_hashes,'person_fingerprint':phash,
              'review_contract':contract,'review_basis':'Agent read actual evidence; hash binding does not certify semantic truth.'}
     if units:receipt.update(unit_reviews=[unit_reviews[i] for i in sorted(units)],unit_fingerprints=unit_hashes)
+    if background is not None:receipt['background_review']=background
     path.write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     return receipt
 
@@ -204,6 +238,7 @@ def quality_status(w):
         validate_reading_inputs(current,request)
         if request.get('schema_version',2)>=4:
             valid=valid and r.get('review_contract')==review_contract(request)
+            valid=valid and background_review_valid(current.get('profile'),r.get('background_review'))
             valid=valid and not ({m['id'] for m in (current.get('profile') or {}).get('methods',[])}-{c.get('method_id') for c in r.get('person_claims',[])})
         if request.get('schema_version',2)>=4 or request.get('scope',{}).get('minimum_stars',1)>1:valid=valid and all(comprehension_valid(current['items'][row['item_id']],row) for row in rows)
         units=unit_inputs(current)
