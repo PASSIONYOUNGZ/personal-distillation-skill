@@ -269,13 +269,23 @@ def supplementary_sources(members):
         link(source.get('label') or source_platform(source),source['url']) for source in selected)+'</div>'
 
 
-def source_prose(item, include_evidence=True):
+def analysis_block(row, base):
+    body='<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])
+    for pic in row.get('images',[]):
+        source=pic.get('url') or pic.get('source_url')
+        body+='<figure class="analysis-figure"><img loading="lazy" data-enlarge src="'+image(pic,base)+'" alt="'+esc(pic['caption'])+'"><figcaption>'+esc(pic['caption'])
+        if source:body+=' · '+link('原作画面',source)
+        body+='</figcaption></figure>'
+    return body+'</section>'
+
+
+def source_prose(item, include_evidence=True, base=None):
     chunks=['<div class="prose">']
     for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
         if field=='what' and item.get('analysis_sections'):
             chunks+=['<h5>'+label+'</h5><div class="structured-analysis">']
             for row in analysis_sections(item['analysis_sections']):
-                chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+                chunks+=[analysis_block(row,base)]
             chunks+=['</div>']
         elif item.get(field):chunks+=['<h5>'+label+'</h5>'+paragraphs(item[field])]
     if item.get('learning'):chunks+=['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(p)+'</li>' for p in item['learning'])+'</ul>']
@@ -283,12 +293,13 @@ def source_prose(item, include_evidence=True):
     return ''.join(chunks)+'</div>'
 
 
-def source_materials(item, base):
+def source_materials(item, base, inline_paths=()):
     """Deep reading retains images and speech; article originals stay in the data."""
     chunks=[]
-    if item.get('images'):
-        chunks+=['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
-        for pic in item['images']:
+    gallery=[pic for pic in item.get('images',[]) if str((Path(base)/pic['path']).resolve()) not in inline_paths]
+    if gallery:
+        chunks+=['<div class="gallery'+(' single' if len(gallery)==1 else '')+'">']
+        for pic in gallery:
             chunks += [f'<figure><img loading="lazy" data-enlarge src="{image(pic,base)}" alt="{esc(pic["caption"])}"><figcaption>{esc(pic["caption"])}'+(' · '+link('图片来源',pic['url']) if pic.get('url') else '')+'</figcaption></figure>']
         chunks+=['</div>']
     if item.get('result'):
@@ -374,18 +385,19 @@ def render_unit(unit, by_id, base, opened=False):
     chunks+=['<summary>'+thumb+'<div class="card-heading">'+tags+title+'<p>'+esc(unit['summary'])+'</p></div><div class="card-side">'+unit_ratings(unit,members)+card_disclosure(body_id)+'</div></summary><div class="card-body" id="'+esc(body_id)+'">']
     chunks+=[anchors,'<div class="unit-source-links">'+content_sources(members)+'</div>']
     if unit.get('_adapted'):
-        chunks+=[source_prose(members[0],include_evidence=False)]
+        chunks+=[source_prose(members[0],include_evidence=False,base=base)]
     else:
         chunks+=['<div class="prose unit-prose">']
         for field,label in (('context','背景'),('attribution','归属')):
             if unit.get(field):chunks+=['<div class="unit-'+field+'"><h5>'+label+'</h5>'+paragraphs(unit[field])+'</div>']
         if unit['paragraphs']:chunks+=['<div class="unit-explanation"><h5 class="sr-only">正文</h5>'+''.join(paragraphs(p) for p in unit['paragraphs'])+'</div>']
-        for row in unit['analysis_sections']:chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+        for row in unit['analysis_sections']:chunks+=[analysis_block(row,base)]
         chunks+=['</div>']
     # The reviewed unit is the explanation. Underlying interpretations and
     # article originals remain unchanged in data, not nested a second time.
+    inline_paths={str((Path(base)/pic['path']).resolve()) for row in unit['analysis_sections'] for pic in row.get('images',[])}
     for item in members:
-        extras=source_materials(item,base)
+        extras=source_materials(item,base,inline_paths)
         same_explanation=(len(members)==1 and not unit['paragraphs'] and bool(unit['analysis_sections'])
                           and unit['analysis_sections']==analysis_sections(item.get('analysis_sections')))
         if not unit.get('_adapted') and same_explanation:
@@ -528,12 +540,13 @@ def render(data, base):
     if biography:
         # Preserve older multi-entry prose, while presenting a single introduction.
         # The writer supplies the concise current version; rendering never truncates it.
-        texts, citations, cited_targets, highlights = [], [], set(), []
+        texts, citations, cited_targets, highlights, notes = [], [], set(), [], []
         for entry in biography:
             if isinstance(entry,str):
                 if entry.strip():texts.append(entry.strip())
                 continue
             if entry.get('text','').strip():texts.append(entry['text'].strip())
+            if entry.get('note'):notes.append(entry['note'])
             entry_highlights=entry.get('highlights',[])
             if not isinstance(entry_highlights,list):raise ValueError('Biography highlights must be a list')
             highlights.extend(entry_highlights)
@@ -548,6 +561,7 @@ def render(data, base):
                     citations.append(evidence([ident]))
                     cited_targets.add(target)
         chunks += ['<div class="biography"><div class="biography-entry"><p class="biography-summary">'+emphasize(' '.join(texts),highlights)+'</p></div>']
+        if notes:chunks += ['<p class="biography-note">'+esc(' '.join(dict.fromkeys(notes)))+'</p>']
         if citations:chunks += ['<div class="evidence biography-sources"><span>资料与例子：</span>'+''.join(citations)+'</div>']
         chunks += ['</div>']
     elif not profile.get('traits'):
@@ -581,7 +595,7 @@ def render(data, base):
     if any(stars_value(i) is None for i in items):
         star_filters += '<button class="star-choice" data-star-filter="0" aria-pressed="false"><span>待了解</span><span class="star-check">'+icon('check',15)+'</span></button>'
     chunks += ['<div class="filters-panel"><div class="filters"><div class="search-wrap">'+icon('search',16)+'<label for="search" class="sr-only">搜索内容</label><input id="search" aria-label="搜索内容标题、简介和解读" placeholder="搜索内容…"></div><div class="topic-select"><button class="select-trigger" id="topic-trigger" aria-label="筛选主题" aria-haspopup="listbox" aria-expanded="false" aria-controls="topic-menu"><span id="topic-label">全部主题</span>'+icon('chevron',15)+'</button><div class="select-menu" id="topic-menu" role="listbox" aria-label="主题选项" hidden>'+options+'</div></div><div class="stars-select"><button class="select-trigger" id="stars-trigger" aria-label="筛选推荐星级" aria-expanded="false" aria-controls="stars-menu"><span id="stars-label">全部星级</span>'+icon('chevron',15)+'</button><div class="select-menu star-menu" id="stars-menu" role="group" aria-label="推荐星级，可多选" hidden><div class="star-menu-head"><strong>推荐星级</strong><span>多选</span></div>'+star_filters+'</div></div><div class="view-buttons" role="tablist" aria-label="地图视图"><button data-view="theme" role="tab" aria-selected="true" aria-controls="theme-table" tabindex="0">按主题</button><button data-view="time" role="tab" aria-selected="false" aria-controls="time-table" tabindex="-1">按时间</button></div><div class="filter-foot"><span id="count" aria-live="polite">'+str(len(items))+' 项</span><button class="text-button" id="reset" hidden>清除</button></div></div></div><div class="table-shell">']
-    if units is not None:
+    if units is not None and len({unit['kind'] for unit in units}) > 1:
         # Last filter chunk ends with the table shell; put the new group before it.
         layer_buttons='<div class="reading-layer-filter" role="group" aria-label="按阅读形式筛选">'+''.join('<button type="button" data-layer-filter="'+value+'" aria-pressed="'+str(not value).lower()+'">'+label+'</button>' for value,label in [('', '全部内容'),('deep','深度解读'),('viewpoint','精选观点')])+'</div>'
         chunks[-1]=chunks[-1].replace('<div class="table-shell">',layer_buttons+'<div class="table-shell">')
@@ -605,16 +619,18 @@ def render(data, base):
                 for field,label in (('what','这篇内容讲了什么'),('use','有什么用'),('thinking','判断与思路'),('directions','可选学习方向')):
                     if field=='what' and item.get('analysis_sections'):
                         chunks += ['<h5>'+label+'</h5><div class="structured-analysis">']
-                        for row in analysis_sections(item['analysis_sections']):chunks+=['<section class="analysis-section"><h6>'+esc(row['title'])+'</h6>'+''.join(paragraphs(p) for p in row['paragraphs'])+'</section>']
+                        for row in analysis_sections(item['analysis_sections']):chunks+=[analysis_block(row,base)]
                         chunks += ['</div>']
                     elif item.get(field):chunks += ['<h5>'+label+'</h5>'+paragraphs(item[field])]
                 if item.get('learning'):chunks += ['<h5>可以借鉴的做法</h5><ul class="learning-list">'+''.join('<li>'+esc(x)+'</li>' for x in item['learning'])+'</ul>']
                 additional=[v for v in item.get('evidence',[]) if v.get('url') not in {s['url'] for s in item['sources']}]
                 if additional:chunks += ['<div class="evidence">'+''.join(link(v.get('label','补充来源'),v['url']) for v in additional if v.get('url'))+'</div>']
                 chunks += ['</div>']
-                if item.get('images'):
-                    chunks += ['<div class="gallery'+(' single' if len(item['images'])==1 else '')+'">']
-                    for pic in item['images']:
+                inline_paths={str((Path(base)/pic['path']).resolve()) for row in item.get('analysis_sections',[]) for pic in row.get('images',[])}
+                gallery=[pic for pic in item.get('images',[]) if str((Path(base)/pic['path']).resolve()) not in inline_paths]
+                if gallery:
+                    chunks += ['<div class="gallery'+(' single' if len(gallery)==1 else '')+'">']
+                    for pic in gallery:
                         chunks += [f'<figure><img loading="lazy" data-enlarge src="{image(pic,base)}" alt="{esc(pic["caption"])}"><figcaption>{esc(pic["caption"])}{(" · "+link("图片来源",pic["url"])) if pic.get("url") else ""}</figcaption></figure>']
                     chunks += ['</div>']
                 if stars_value(item) is not None and item.get('score_reason'):chunks += ['<p class="recommendation-note"><strong>推荐理由</strong> · '+esc(item['score_reason'])+'</p>']

@@ -90,6 +90,8 @@ def build(w):
         item.setdefault('topic','未分类');item.setdefault('date',None)
         if item.get('cover'):item['cover']=picture(item['cover'])
         if item.get('images'):item['images']=[picture(p) for p in item['images']]
+        for part in item.get('analysis_sections',[]):
+            if part.get('images'):part['images']=[picture(p) for p in part['images']]
         # Preserve already reviewed documents/transcripts; append material-backed entries
         # without silently replacing an existing list supplied by another producer.
         documents,ts,attached=reader_materials(item)
@@ -126,6 +128,9 @@ def build(w):
     from reading_units import reading_units,methods
     units_path=d/'reading-units.json'
     if units_path.is_file():result['reading_units']=required(units_path)
+    for unit in result.get('reading_units',[]):
+        for part in unit.get('analysis_sections',[]):
+            if part.get('images'):part['images']=[picture(p) for p in part['images']]
     # Validation keeps original fields and provenance intact; only an explicit
     # layer declaration enables the new reading architecture.
     reading_units(result,(request or {}).get('scope',{}).get('viewpoint_limit'))

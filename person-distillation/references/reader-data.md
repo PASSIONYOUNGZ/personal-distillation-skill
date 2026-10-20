@@ -76,7 +76,9 @@ creator可选：name/role/avatar（path）/links（label/url）。未指定role�
 
 默认品牌署名另由包内assets/project-developer.json及其公开头像提供，已经获得项目开发者的分发授权；它是项目公开署名，不是当前使用者配置/登录。未声明creator时仍显示项目开发者与主页；显式creator继续按实际角色处理。该公开署名是私有配置不入包原则的明确例外，不准顺带打包其他账号、配置或人物材料。
 
-items.analysis_sections为[{title,paragraphs:[...]}]，复杂作品用于呈现主要内容，what保留兼容与检索摘要；构建、Markdown、HTML与来源审阅使用同一组段落。不要把完整字幕拿到后仍仅写what几句。level/limit保留底稿，不常显“简单解析”或“阅读时留意”；重要限制自然限定相应正文。coverage只在入口处简短出现一次，不在卡片展开正文再重复；原作链接保留一组，证据相同不重复列“依据”。
+items.analysis_sections为[{title,paragraphs:[...]}]，复杂作品用于呈现主要内容，what保留兼容与检索摘要；构建、Markdown、HTML与来源审阅使用同一组段落。小节可选images数组，每图含path、caption、url或source_url，沿用普通图片合同，在对应小节之后显示并支持放大；reading_units的analysis_sections同样支持。只放实际查看且有解释作用的原作图，视频图注注明时间及该画面说明什么，不把选图数作为质量指标。路径在底稿中相对任务根目录，reader-data中相对数据文件。不要把完整字幕拿到后仍仅写what几句。level/limit保留底稿，不常显“简单解析”或“阅读时留意”；重要限制自然限定相应正文。coverage只在入口处简短出现一次，不在卡片展开正文再重复；原作链接保留一组，证据相同不重复列“依据”。
+
+biography条目可选note，显示在人物正文下方的小字中；适合确有必要但不属于人物介绍主句的取材说明。不填写时保持既有介绍布局，不自动生成免责声明，也不把决定事实含义的限定挪离正文。
 
 配置读取顺序：任务config.creator_file→config.project_settings_file指定的设置文件→PERSON_DISTILLATION_SETTINGS指定设置文件→宿主CODEX_HOME下person-distillation/settings.json（缺省为~/.codex下同路径）→通用品牌。设置文件格式为{"creator_file":"配置路径"}，相对路径以设置文件目录为基准；任务config.creator_enabled=false可关闭。只读声明位置，不扫描整机或猜账号。显式坏配置报告警告，不偷偷退用别人的身份。构建将公开字段与头像复制到任务.distill/user并记录build_metadata来源；头像失效时保留ID/链接并报缺项。新用户没有设置也能完整生成，不能要求首次调用填写制作资料。
 

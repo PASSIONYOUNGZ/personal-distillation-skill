@@ -55,10 +55,17 @@ def inputs(w):
         item=catalog[ident];files={}
         for m in item.get('materials',[]):
             if m.get('file'):files[m['file']]=file_hash(m['file'])
-        for pic in ([item['cover']] if item.get('cover') else [])+item.get('images',[]):files[pic['path']]=file_hash(pic['path'])
+        pictures=([item['cover']] if item.get('cover') else [])+item.get('images',[])
+        for record in (item,cards.get(ident) or {}):
+            pictures += [pic for part in record.get('analysis_sections',[]) for pic in part.get('images',[])]
+        for pic in pictures:files[pic['path']]=file_hash(pic['path'])
         p=d/'corrected'/f'{ident}.json'
         if p.exists(): correction(w,ident);files[p.relative_to(w).as_posix()]=digest(p)
         result['items'][ident]={'catalog':{k:v for k,v in item.items() if k!='routes'},'card':cards.get(ident),'files':files}
+    for unit in result.get('reading_units',[]):
+        pictures=[pic for part in unit.get('analysis_sections',[]) for pic in part.get('images',[])]
+        if pictures:
+            result.setdefault('reading_unit_images',{})[unit['id']]={pic['path']:file_hash(pic['path']) for pic in pictures}
     if result['profile']:
         result['profile_image']={}
         for kind in ('hero_image','avatar'):
@@ -156,6 +163,7 @@ def unit_inputs(data):
         refs=unit.get('item_ids',[])
         if not refs or len(refs)!=len(set(refs)) or set(refs)-set(data['items']):raise ValueError('Reading unit source references invalid')
         result[ident]={'unit':unit,'items':{i:data['items'][i] for i in refs}}
+        if ident in data.get('reading_unit_images',{}):result[ident]['files']=data['reading_unit_images'][ident]
     return result
 
 def unit_review_valid(value, review):

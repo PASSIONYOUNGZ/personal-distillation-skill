@@ -1,5 +1,13 @@
 # Updates
 
+## 2026.10.20.1
+
+- Explain the original work's background, concrete actions, examples, results and the author's judgment before compressing it; preserve attribution and evidence limits.
+- Keep only viewpoints with learning value in the source itself. Hide absent modules and redundant reading-type filters rather than filling them with progress announcements or generic advice.
+- Check readily available first-party dates before leaving a timeline undated; distinguish repository creation, first publication and book publication.
+- Add optional section-level source images and biography notes. Keep frames beside their explanation, deduplicate legacy galleries, preserve Markdown export paths, and bind changed image bytes to affected evidence reviews.
+- The released Skill and ZIP are byte-identical to the approved local candidate. Validation: 173 relevant Python tests, 9 JavaScript logic tests, plus 31 targeted checks from an extracted ZIP. These are synthetic code checks, not browser visual, new-machine or speed tests.
+
 ## 2026.10.19.2
 
 - Consolidate experience by purpose: reusable methods in the Skill, project preferences in project instructions, and case evidence in local records.

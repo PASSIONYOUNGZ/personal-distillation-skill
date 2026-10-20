@@ -37,6 +37,18 @@ def fixture():
 
 
 class ReadingArchitecture(unittest.TestCase):
+    def test_single_reading_kind_has_no_empty_module_or_redundant_layer_filter(self):
+        for kind,absent in [('deep','viewpoints'),('viewpoint','notes')]:
+            data=fixture()
+            for unit in data['reading_units']:unit['kind']=kind
+            tree=ReaderTree(render(data,ROOT/'assets')).root
+            self.assertFalse(tree.descendants(cls='reading-layer-filter'))
+            body=render(data,ROOT/'assets')
+            self.assertNotIn('id="'+absent+'"',body)
+            self.assertNotIn('href="#'+absent+'"',body)
+            self.assertEqual(inspect_html(data,body),[])
+        self.assertIn('class="reading-layer-filter"',render(fixture(),ROOT/'assets'))
+
     def test_summary_highlights_are_optional_exact_limited_nonoverlapping_phrases(self):
         data=fixture();unit=data['reading_units'][1]
         unit['summary']='A specific judgment, with a concrete reason.'

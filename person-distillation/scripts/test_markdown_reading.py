@@ -6,6 +6,22 @@ import distill
 
 
 class MarkdownReadingTests(unittest.TestCase):
+    def test_legacy_section_image_path_is_relative_to_export(self):
+        with test_workspace() as w:
+            _,_,cards=fixture(w)
+            config=distill.read(w/'config.json');config['output']['formats']=['markdown'];distill.write(w/'config.json',config)
+            # The real renderer must relocate a task-root path into output/.
+            frame=w/'materials/frame.png'
+            frame.write_bytes(b'local fixture')
+            cards[0]['analysis_sections']=[{'title':'Observed frame','paragraphs':['The picture supports this step.'],
+                'images':[{'path':'materials/frame.png','caption':'00:12 source frame','source_url':'https://example.com/video'}]}]
+            distill.write(w/'.distill/cards.json',cards)
+            distill.render(w)
+            markdown=(w/'output/人物蒸馏.md').read_text(encoding='utf-8')
+            self.assertIn('src="../materials/frame.png"',markdown)
+            self.assertTrue((w/'output/../materials/frame.png').is_file())
+            self.assertEqual(distill.read(w/'.distill/cards.json')[0]['analysis_sections'][0]['images'][0]['path'],'materials/frame.png')
+
     def test_viewpoints_share_map_order_and_escape_emphasis_without_touching_originals(self):
         from test_reader_feedback import fixture as reader_fixture
         from markdown_reading import parts

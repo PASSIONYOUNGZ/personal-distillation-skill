@@ -12,6 +12,8 @@ def sections(value):
         if isinstance(body,str):body=[body]
         if not isinstance(body,list) or not body or any(not isinstance(p,str) or not p.strip() for p in body):
             raise ValueError('analysis_sections need nonempty explanatory paragraphs')
+        if 'images' in row and (not isinstance(row['images'],list) or any(not isinstance(pic,dict) for pic in row['images'])):
+            raise ValueError('analysis section images must be an object list')
         row['paragraphs']=body;result.append(row)
     return result
 

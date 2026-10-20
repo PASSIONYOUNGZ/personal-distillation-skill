@@ -67,6 +67,10 @@
 @media(max-width:1100px){.hero-layout.has-recent-content{grid-template-columns:minmax(0,1fr);gap:26px;max-width:820px}.has-recent-content .subject-identity h1{font-size:clamp(36px,5vw,56px)}.recent-content{width:100%}.recent-card{grid-template-columns:minmax(0,42%) minmax(0,1fr)}}
 @media(max-width:480px){.has-recent-content .subject-identity{gap:12px}.has-recent-content .subject-identity h1{font-size:34px}.has-recent-content .subject-avatar{width:54px;height:54px;border-radius:14px}.recent-content{padding:14px 12px 4px;border-radius:15px}.recent-card{grid-template-columns:minmax(0,46%) minmax(0,1fr);gap:10px}.recent-title{font-size:12px}.recent-meta{font-size:9px}.recent-heading h2{font-size:15px}}
 .biography-sources{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px}.biography-sources a{margin-right:0}
+.biography .biography-note{font-size:12px;line-height:1.8;color:var(--muted);text-indent:0;margin-top:12px}
+.analysis-figure{margin:22px auto 26px;width:100%;max-width:960px}
+.analysis-figure img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:10px;cursor:zoom-in}
+.analysis-figure figcaption{font-size:12px;line-height:1.8;color:var(--muted);padding:8px 2px 0}
 .profile-subheading{font-size:19px;margin:28px 0 16px}
 .milestone-content .milestone-publication{font-size:12px;color:var(--muted);margin-top:7px}
 #mindmap{container-type:inline-size;container-name:topics}

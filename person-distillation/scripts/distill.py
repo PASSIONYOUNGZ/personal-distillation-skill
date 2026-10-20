@@ -302,7 +302,7 @@ def render(w):
     report=['# '+config['person']['name']+' · 个人蒸馏','']
     for filename in ('background.md','portrait.md'):
         if (w/'notes'/filename).exists():report += [(w/'notes'/filename).read_text(encoding='utf-8'),'']
-    from markdown_reading import parts as reading_markdown,archive_parts,material_parts,correction_parts
+    from markdown_reading import parts as reading_markdown,archive_parts,material_parts,correction_parts,section_parts
     layered=reading_markdown(reader_data,link) if reader_data else []
     report+=layered
     if layered and (w/'notes/directions.md').exists():report += [(w/'notes/directions.md').read_text(encoding='utf-8'),'']
@@ -319,7 +319,11 @@ def render(w):
         report += ['### '+item['title'],'',link('原作',item['sources'][0]['url'])+' · '+card.get('level','简单解析'),'']
         for field,label in [('what','内容'),('use','有什么用'),('workflow','做法'),('thinking','判断与思路'),('limits','适用条件与局限'),('directions','可选学习方向')]:
             if field=='what' and card.get('analysis_sections'):
-                for part in card['analysis_sections']:report+=['#### '+part['title'],'','\n\n'.join(part['paragraphs']),'']
+                for part in card['analysis_sections']:
+                    exported=copy.deepcopy(part)
+                    for pic in exported.get('images',[]):
+                        pic['path']=Path(os.path.relpath(local(w,pic['path']),w/'output')).as_posix()
+                    report+=section_parts(exported,link)
             elif card.get(field):report += ['**'+label+'。** '+card[field],'']
         if card.get('evidence'):report += ['依据：'+'、'.join(link(x.get('label','来源'),x['url']) for x in card['evidence']),'']
         if reader_data:

@@ -20,6 +20,16 @@ def _statement(unit):
     rows.append(escape(text[start:]));return '<p>'+''.join(rows)+'</p>'
 
 
+def section_parts(part,link):
+    rows=['#### '+part['title'],'','\n\n'.join(part['paragraphs']),'']
+    for pic in part.get('images',[]):
+        # HTML attributes preserve punctuation in captions and local image paths.
+        rows+=['<figure><img src="'+escape(pic['path'],quote=True)+'" alt="'+escape(pic['caption'],quote=True)+'"><figcaption>'+escape(pic['caption'])+'</figcaption></figure>','']
+        source=pic.get('url') or pic.get('source_url')
+        if source:rows+=[link('原作画面',source),'']
+    return rows
+
+
 def _fence(text, language=''):
     width=max([2]+[len(x) for x in re.findall(r'`+',text)])+1
     mark='`'*width
@@ -162,7 +172,7 @@ def parts(data,link):
             for key in ('context','attribution'):
                 if unit.get(key):rows+=[unit[key],'']
             if not unit.get('_adapted') or not unit.get('analysis_sections'):rows+=['\n\n'.join(unit['paragraphs']),'']
-            for part in unit.get('analysis_sections',[]):rows+=['#### '+part['title'],'','\n\n'.join(part['paragraphs']),'']
+            for part in unit.get('analysis_sections',[]):rows+=section_parts(part,link)
             rows+=['来源：'+'；'.join(link(by_id[i]['title'],by_id[i]['sources'][0]['url']) for i in unit['item_ids']),'']
     examples=methods(data.get('profile',{}),by_id)
     if examples:rows+=['## 做事逻辑与方法','']

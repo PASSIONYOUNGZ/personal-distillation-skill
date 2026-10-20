@@ -18,8 +18,9 @@ def validate(data,base):
     if p.get('intro') is not None and not isinstance(p['intro'],str):errors.append('Invalid optional profile intro')
     ids=[i.get('id') for i in items]
     if len(ids)!=len(set(ids)) or any(not isinstance(i,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',i) for i in ids):errors.append('Invalid/duplicate item IDs')
+    units=[]
     try:
-        reading_units(data)
+        units=reading_units(data) or []
         methods(p,ids)
     except (ValueError,TypeError,KeyError) as exc:errors.append('Reading architecture: '+str(exc))
     def url(value):return isinstance(value,str) and value.startswith(('https://','http://'))
@@ -33,7 +34,8 @@ def validate(data,base):
         if 'analysis_sections' in item:
             try:
                 from content_analysis import sections
-                sections(item['analysis_sections'])
+                for section in sections(item['analysis_sections']):
+                    for image in section.get('images',[]):pic(image,ident+' section '+section['title'])
             except ValueError as exc:errors.append(ident+': '+str(exc))
         for key in ('title','topic'):
             if not isinstance(item.get(key),str) or not item[key].strip():errors.append(ident+': missing '+key)
@@ -68,6 +70,9 @@ def validate(data,base):
         keys=('title','text') if group in ('traits','topic_navigation') else ('title','direct','transfer','foundation')
         for entry in p[group]:
             if any(not entry.get(k) for k in keys) or not entry.get('items') or set(entry.get('items',[]))-set(ids):errors.append('Invalid '+group+' evidence/fields')
+    for unit in units:
+        for section in unit.get('analysis_sections',[]):
+            for image in section.get('images',[]):pic(image,'unit '+unit.get('id',''))
     if 'biography' in p:
         if not isinstance(p['biography'],list):errors.append('Invalid biography')
         else:
@@ -79,6 +84,7 @@ def validate(data,base):
                 if not b.get('sources') or any(not isinstance(s,dict) or not s.get('label') or not url(s.get('url')) for s in b.get('sources',[])):errors.append('Biography needs source links')
                 if set(b.get('items',[]))-set(ids):errors.append('Unknown biography item reference')
                 highlights=b.get('highlights',[])
+                if 'note' in b and (not isinstance(b['note'],str) or not b['note'].strip()):errors.append('Invalid biography note')
                 if not isinstance(highlights,list) or any(not isinstance(x,str) or not x.strip() or x not in b['text'] for x in highlights):errors.append('Invalid biography highlights')
     if 'scope_summary' in p and (not isinstance(p['scope_summary'],str) or not p['scope_summary'].strip()):errors.append('Invalid concise scope summary')
     if 'timeline' in p and not isinstance(p.get('timeline'),list):errors.append('Invalid timeline')
@@ -197,7 +203,8 @@ def inspect_html(data,body):
                 continue
             required_text.extend([unit['title'],unit['summary'],*unit['paragraphs']])
             required_text.extend(unit.get(field,'') for field in ('context','attribution'))
-            for row in unit['analysis_sections']:required_text.extend([row['title'],*row['paragraphs']])
+            for row in unit['analysis_sections']:
+                required_text.extend([row['title'],*row['paragraphs'],*[pic['caption'] for pic in row.get('images',[])]])
         # Explicit units carry the reviewed explanation. Source interpretations
         # remain in data and must not be forced into a second nested reader.
         deep_ids={ident for unit in units if unit['kind']=='deep' and unit.get('_adapted') for ident in unit['item_ids']}
@@ -215,6 +222,7 @@ def inspect_html(data,body):
     for entry in data.get('profile',{}).get('biography',[]):
         text=entry if isinstance(entry,str) else entry['text']
         if compact(text) not in person_visible:errors.append('Biography text missing from person section')
+        if isinstance(entry,dict) and entry.get('note') and compact(entry['note']) not in person_visible:errors.append('Biography note missing from person section')
         if isinstance(entry,dict) and any(s['url'] not in h.person_links for s in entry.get('sources',[])):errors.append('Biography source link missing from person section')
     original_ids=set(ids) if units is None else {ident for unit in units if unit['kind']=='viewpoint' for ident in unit['item_ids']}
     for item in data['items']:
@@ -223,6 +231,10 @@ def inspect_html(data,body):
         for document in item.get('documents',[])+[t for t in item.get('transcripts',[]) if t.get('type')=='document']:
             from document_render import render_document
             if render_document(document['document']) not in body:errors.append('Document text/structure differs: '+item['id'])
+    shown_sections=([section for unit in units if unit['kind']=='deep' for section in unit['analysis_sections']]
+                    if units is not None else [section for item in data['items'] for section in item.get('analysis_sections',[])])
+    expected_figures=sum(len(section.get('images',[])) for section in shown_sections)
+    if body.count('class="analysis-figure"')!=expected_figures:errors.append('Inline analysis image count differs')
     if data.get('creator',{}).get('name'):required_text.append(data['creator']['name'])
     if any(compact(text) not in visible for text in required_text):errors.append('Reviewed text missing from visible HTML')
     return errors
