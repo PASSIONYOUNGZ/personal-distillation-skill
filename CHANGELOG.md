@@ -1,5 +1,13 @@
 # Updates
 
+## 2026.10.21.1
+
+- Restore viewpoint emphasis for ordinary content cards: preserve highlights through the build and reading-unit adapter into both HTML and Markdown, with exact-phrase validation and unchanged originals.
+- Show the actual selected work count, video/text counts, date range and selected source platforms in the hero scope. Keep directory checks and source limitations in the folded explanation.
+- Resolve the media-selection instruction cycle: uncertain videos may need their actual content read before rating and selection. Stabilize each batch before polished writing, reuse verified versions, and update the date boundary incrementally while preserving source coverage and reading quality.
+- Distinguish an absent uniform acquisition log from an absence of acquisition receipts. Keep unrecorded per-platform time unknown instead of inferring it.
+- Publish the approved local candidate without changing its 90 Skill files or ZIP bytes. Validation: 97 relevant Python tests, 9 JavaScript logic tests and 2 targeted regressions from the extracted ZIP. No new end-to-end speedup, browser visual or offline-opening pass is claimed.
+
 ## 2026.10.20.1
 
 - Explain the original work's background, concrete actions, examples, results and the author's judgment before compressing it; preserve attribution and evidence limits.

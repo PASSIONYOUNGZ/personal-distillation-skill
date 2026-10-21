@@ -13,6 +13,19 @@ import acquisition
 
 
 class ProcessReport(unittest.TestCase):
+    def test_absent_uniform_log_does_not_claim_no_acquisition_receipts(self):
+        with test_workspace() as w:
+            custom=w/'download-receipt.json'
+            custom.write_text('{"status":"downloaded","seconds":12}',encoding='utf-8')
+            append(w,{'stage':'acquisition','status':'passed','operation':'custom-download','evidence':['download-receipt.json']})
+            before=custom.read_bytes();save(w);report=summarize(w)
+            self.assertFalse(report['acquisition_log_status']['exists'])
+            self.assertEqual(report['acquisition'],[])
+            text=(w/'.distill/过程记录.md').read_text(encoding='utf-8')
+            self.assertNotIn('本任务尚无获取回执',text)
+            self.assertIn('这不代表没有获取',text)
+            self.assertEqual(custom.read_bytes(),before)
+
     def test_parallel_measurements_are_unioned_without_inventing_total_time(self):
         rows=[{'started_at':'2026-01-01T00:00:00Z','ended_at':'2026-01-01T00:00:10Z'},
               {'started_at':'2026-01-01T08:00:05+08:00','ended_at':'2026-01-01T08:00:20+08:00'},

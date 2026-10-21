@@ -71,6 +71,8 @@ def summarize(workspace):
       'acquisition':[{'receipt_id':row.get('receipt_id'),'source_id':row.get('source_id') or row.get('channel'),
                      'capability':row.get('capability'),'route_id':row.get('route_id') or row.get('route'),
                      'decision':row.get('decision',{}),'evidence':row.get('evidence',[])} for row in acquired],
+      'acquisition_log_status':{'path':'.distill/acquisition-log.jsonl','exists':(d/'acquisition-log.jsonl').is_file(),'receipts':len(acquired),
+                                'boundary':'This table covers the uniform log only; its absence does not establish that no collection occurred.'},
       'warnings':warnings,'basis':'Existing logs and receipts only; interpretation and unobserved work require the agent.'}
     return report
 
@@ -120,7 +122,7 @@ def save(workspace):
     position=rows.index('## 获取与失败路线');rows[position:position]=details
     for row in report['acquisition']:
         decision=row['decision'];rows.append('| '+' | '.join(escaped(x) for x in (row['source_id'],row['capability'],row['route_id'],decision.get('outcome'),decision.get('action')))+' |')
-    if not report['acquisition']:rows+=['','本任务尚无获取回执；纯本地导入或未开始获取都可能如此，不能据此判断平台失败。']
+    if not report['acquisition']:rows+=['','统一获取日志未记录可列出的回执；这不代表没有获取。自定义下载、正文与媒体回执须另按实际路径核查，不能据此按平台推算耗时。']
     rows+=['','## 失败与待处理事件','']
     for row in report['failed_or_blocked']:
         detail='；'.join(escaped(row[key]) for key in ('error_type','summary','next_action') if row.get(key))

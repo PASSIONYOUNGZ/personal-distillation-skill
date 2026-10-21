@@ -1,11 +1,11 @@
-# Release validation · 2026.10.20.1
+# Release validation · 2026.10.21.1
 
-This release publishes the approved local candidate without changing its 90 Skill files or ZIP bytes. Source, project installation, global installation, archive members and extracted files match the candidate manifest.
+This release publishes the approved local candidate without changing its 90 Skill files or archive bytes. Source, project installation, global installation, ZIP members and extracted files match the candidate manifest.
 
-The local candidate passed 173 relevant Python tests and 9 tests of the actual reader JavaScript under a synthetic DOM host. An extracted archive passed 31 targeted pipeline, reading-unit, Markdown and section-image checks. The Skill format validator, local Markdown references, ZIP CRC and actual reader structure/self-contained-resource checks also passed.
+The candidate passed 97 relevant Python tests, 9 tests of the actual reader JavaScript under a synthetic DOM host, the Skill format validator and package-local Markdown reference checks. Two targeted regressions were also run from the extracted ZIP.
 
-The new regressions cover inline image rendering and source links, old and explicit reading-unit paths, gallery deduplication, export-relative paths, invalid-input diagnostics, empty modules/filters, optional biography notes and review invalidation after image content changes. Tests do not certify prose quality or the truth of an author's experiments.
+The new build-path regression checks that a normal content card retains exact viewpoint highlights through build, adaptation, HTML strong elements and Markdown. It checks input cards and source text remain unchanged, and rejects a phrase absent from the summary. The reporting regression ensures a missing uniform acquisition log does not claim no custom acquisition receipts exist. Existing pipeline, scope, review and source-preservation checks also pass.
 
-Browser automation rejected file-protocol access. No browser pixel, multi-viewport or actual offline-opening pass is claimed. No fresh OS setup, new platform collection, ASR rerun, independent replication of source experiments or speed benchmark was performed for this release.
+The actual local reader's selected works, media counts and viewpoint emphasis were structurally checked. Browser visual and actual offline opening were not measured. No new full-scope online research, ASR rerun, fresh OS deployment or measured end-to-end speed improvement is claimed. Workflow changes target duplicate work and late selection; they do not reduce source reading or quality requirements.
 
-Private research, original media, local audit records and user configuration are excluded. The existing authorized public project developer credit is unchanged. Existing source records and older release archives are preserved.
+Private research, original media, user configuration and local audit records remain outside this public package. Existing authorized public project developer credit is unchanged. Previous release archives and the candidate snapshot are preserved.

@@ -54,7 +54,7 @@ id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/s
 | name/headline | 首页姓名与简明身份定位，不再追加人物简介段 |
 | intro | 旧数据兼容字段，保留已有值但新版首页默认不显示；新任务不靠换字段名重复展示简介 |
 | scope/source_summary/boundary | scope/source_summary只补读者需要的实际范围与取材，不包含过程说明；没有增量时不生成折叠。boundary存内部边界、原请求差异及研究过程，不生成页尾声明 |
-| scope_summary | 首页只常显实际数量、时间和取材平台的一条短范围；必要缺口简短说明，删减集合不能冒充完成最近N项。时区转换、去重细则、预览/调试阶段留底稿 |
+| scope_summary | 首页短范围：实际作品总数（视频数、图文/文章/文字观点数）、日期范围、入选作品的来源平台。按作品版本计数，不把深读/观点数或视频配文另算成媒介数量；不把仅核查目录或背景的入口写成入选来源。范围限制放折叠说明；实际阶段成果不能冒充完成原范围 |
 | accounts | 已核人物主页的label/url |
 | biography | 人物介绍数组，兼容旧结构；新任务只放一个无title对象，以text一段概括角色、代表实践和有依据特点，sources集中列label/url，可选items指向实例。highlights为text中少量原样短语数组，用于重点身份/实践加粗，不加新事实，不整段加粗。年份与转折交timeline，不分小节复述履历 |
 | avatar | 人物已核账号头像：path、caption、url或account_url、platform、observed_at、selection_reason；与制作人头像、作品主图区分 |
@@ -92,4 +92,4 @@ python <skill>/scripts/distill.py verify --workspace <workspace>
 
 assets/reader.example.json是标注清楚的合成示例，头像也是合成占位图，仅供渲染验收，不能当人物证据。
 
-精选观点可在reading_units单元填写highlights：summary中1—2处原样短语数组，突出核心判断或关键区别；不改字、不插入HTML，不整段加粗，不只标人物名字。缺省仍兼容旧数据。主题分组按内容地图的统一主题顺序排列和编号；只有单元中存在的新主题追加到统一顺序末尾，筛选不重编号。方法证据完整保留数据，页面常显去重来源入口，详细note、kind与locator按需展开。
+精选观点在内容卡或reading_units单元填写highlights：从summary中选1—2处原样短语，突出核心判断或关键区别；普通卡经构建和适配也应传递到HTML与Markdown。不改字、不插入HTML，不整段加粗，不只标人物名字；审阅新成品时核对实际强调已显示。缺省仍兼容旧数据。主题分组按内容地图的统一主题顺序排列和编号；只有单元中存在的新主题追加到统一顺序末尾，筛选不重编号。方法证据完整保留数据，页面常显去重来源入口，详细note、kind与locator按需展开。

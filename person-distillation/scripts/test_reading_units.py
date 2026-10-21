@@ -37,6 +37,35 @@ def fixture():
 
 
 class ReadingArchitecture(unittest.TestCase):
+    def test_card_highlights_survive_build_adaptation_html_and_markdown(self):
+        import distill
+        from test_pipeline import test_workspace
+        from test_contracts import fixture as pipeline_fixture
+        from build_reader import build
+        from markdown_reading import parts
+        with test_workspace() as w:
+            _,items,cards=pipeline_fixture(w)
+            statement='Respect reader intelligence, but explain the necessary background.'
+            for card in cards:
+                card.update(reading_layer='viewpoint',summary=statement,highlights=['explain the necessary background'])
+            distill.write(w/'.distill/cards.json',cards)
+            before=(w/'.distill/cards.json').read_bytes()
+            originals={m['file']:(w/m['file']).read_bytes() for item in items for m in item['materials']}
+            data=build(w)
+            self.assertTrue(all(u['highlights']==['explain the necessary background'] for u in reading_units(data)))
+            body=render(data,w/'output')
+            statements=ReaderTree(body).root.descendants(cls='viewpoint-statement')
+            self.assertEqual(len(statements),len(items))
+            for row in statements:
+                self.assertEqual(row.text(),statement)
+                self.assertEqual(row.descendants(tag='strong')[0].text(),'explain the necessary background')
+            markdown='\n'.join(parts(data,lambda label,url:'['+label+']('+url+')'))
+            self.assertEqual(markdown.count('<strong>explain the necessary background</strong>'),len(items))
+            self.assertEqual(before,(w/'.distill/cards.json').read_bytes())
+            self.assertEqual(originals,{name:(w/name).read_bytes() for name in originals})
+            data['items'][0]['highlights']=['not present in the statement']
+            with self.assertRaisesRegex(ValueError,'Summary highlights'):reading_units(data)
+
     def test_single_reading_kind_has_no_empty_module_or_redundant_layer_filter(self):
         for kind,absent in [('deep','viewpoints'),('viewpoint','notes')]:
             data=fixture()

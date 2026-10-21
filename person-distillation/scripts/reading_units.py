@@ -61,6 +61,7 @@ def reading_units(data, viewpoint_limit=None):
          'title': item['title'], 'topic': item['topic'], 'summary': item.get('summary', ''),
          'paragraphs': [item['what']] if item.get('what') and not item.get('analysis_sections') else [],
          'analysis_sections': copy.deepcopy(item.get('analysis_sections', [])),
+         **({'highlights': copy.deepcopy(item['highlights'])} if 'highlights' in item else {}),
          '_adapted': True} for item in items]
     if not isinstance(raw, list) or any(not isinstance(unit, dict) for unit in raw):
         raise ValueError('reading_units must be an object list')

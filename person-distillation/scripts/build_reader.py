@@ -80,7 +80,7 @@ def build(w):
     output=[]
     for ident in chosen:
         item=copy.deepcopy(by_id[ident]);card=normalize_card(by_card[ident])
-        for k in ('summary','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage','reading_layer','interpretation_kind'):
+        for k in ('summary','highlights','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage','reading_layer','interpretation_kind'):
             if k in card:item[k]=copy.deepcopy(card[k])
         item.setdefault('summary','');item.setdefault('what','')
         item['learning']=card.get('learning') or ([card['workflow']] if card.get('workflow') else [])
