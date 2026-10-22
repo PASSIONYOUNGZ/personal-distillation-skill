@@ -33,6 +33,7 @@ def analyze(events):
     edges=sorted({x for r in rows for x in (r['start'],r['end'])} | ({min(horizon),max(horizon)} if horizon else set()))
     exclusive=Counter();gaps=[];covered=0;parallel=0
     rank={'tool':4,'wait':4,'phase':2,'legacy':1,'task':0}
+    by_id={r['span_id']:r for r in rows if r['span_id']}
     for a,b in zip(edges,edges[1:]):
         active=[r for r in rows if r['start']<=a and r['end']>=b and r['span_kind']!='task']
         if not active:
@@ -40,9 +41,10 @@ def analyze(events):
             else:gaps.append({'start':a,'end':b,'seconds':b-a})
             continue
         covered+=b-a
-        active=[r for r in active if rank.get(r['span_kind'],1)==max(rank.get(x['span_kind'],1) for x in active)]
+        highest_rank=max(rank.get(x['span_kind'],1) for x in active)
+        active=[r for r in active if rank.get(r['span_kind'],1)==highest_rank]
         # A parent and its nested tool of equal kind: deepest closed child wins.
-        parents=set();by_id={r['span_id']:r for r in rows if r['span_id']}
+        parents=set()
         for r in active:
             parent=r['parent_id'];seen=set()
             while parent and parent not in seen:

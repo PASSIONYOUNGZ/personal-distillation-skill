@@ -115,6 +115,42 @@ class ReaderSourcePresentation(unittest.TestCase):
         document.pop('source_url')
         self.assertIn('work-1: source label missing',validate(data,ROOT/'assets'))
 
+    def test_viewpoint_without_original_uses_direct_platform_links_and_keeps_anchor(self):
+        data=fixture();item=data['items'][1];item['documents']=[];item['transcripts']=[]
+        item['sources']=[{'platform':'X','url':'https://x.com/author/status/200'},
+                         {'platform':'微博','url':'https://weibo.com/456/DEF'}]
+        body=render(data,ROOT/'assets');card=ReaderTree(body).root.descendants(ident='unit-reading-1')[0]
+        self.assertEqual(card.tag,'article')
+        self.assertFalse(card.descendants(tag='summary'))
+        self.assertFalse(card.descendants(cls='viewpoint-body'))
+        self.assertNotIn('查看原文',card.text())
+        source=card.descendants(cls='viewpoint-source-links')[0]
+        self.assertEqual(source.text(),'内容来源：X、微博')
+        self.assertEqual([a.attrs['href'] for a in source.descendants(tag='a')],
+                         [source['url'] for source in item['sources']])
+        self.assertTrue(card.descendants(ident='note-work-1'))
+        self.assertEqual(inspect_html(data,body),[])
+
+    def test_mixed_viewpoint_preserves_available_original_and_other_source_link(self):
+        data=fixture();data['items'][2]['documents']=[]
+        data['reading_units'][1]['item_ids']=['work-1','work-2']
+        data['reading_units'].pop(2)
+        body=render(data,ROOT/'assets');card=ReaderTree(body).root.descendants(ident='unit-reading-1')[0]
+        self.assertEqual(card.tag,'details')
+        self.assertIn('Exact original 1\nSecond original line.',card.text())
+        self.assertNotIn('原文请在来源中查看',card.text())
+        self.assertIn(data['items'][2]['sources'][0]['url'],[a.attrs['href'] for a in card.descendants(tag='a')])
+        self.assertEqual(inspect_html(data,body),[])
+
+    def test_complete_viewpoint_original_keeps_all_paragraphs_without_length_cutoff(self):
+        data=fixture();text='起因与背景。\n\n'+('具体经过与条件。'*120)+'\n\n最后的转折与结论。'
+        data['items'][1]['documents'][0]['document']={'format':'text','text':text}
+        before=copy.deepcopy(data)
+        body=render(data,ROOT/'assets');card=ReaderTree(body).root.descendants(ident='unit-reading-1')[0]
+        self.assertIn(text,card.text())
+        self.assertEqual(data,before)
+        self.assertEqual(inspect_html(data,body),[])
+
     def test_viewpoint_original_links_do_not_reintroduce_a_collapsed_continuation(self):
         data=fixture();item=data['items'][1]
         item['sources']=[{'platform':'X','url':'https://x.com/author/status/200'},

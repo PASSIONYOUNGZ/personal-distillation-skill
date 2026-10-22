@@ -80,7 +80,8 @@ def snapshot(workspace):
     outputs={p.name:file_hash(p) for p in (root/'output/reader-data.json',root/'output/人物蒸馏.html') if p.is_file()}
     return {'schema_version':1,'subject_key':subject_key(person),'person_name':person.get('name',''),
             'workspace':str(root),'request_sha256':hashed(config.get('request',{})),'works':works,
-            'states':{'collected':True,'source_review_current':review_ok,'artifacts':outputs,'user_read':'unknown'},
+            'states':{'indexed':True,'works_with_materials':sum(bool(work['materials']) for work in works),
+                      'source_review_current':review_ok,'artifacts':outputs,'user_read':'unknown'},
             'boundary':'Metadata and evidence hashes; no claim of source freshness, semantic truth, complete scope or user mastery.'}
 
 def register(workspace,library):

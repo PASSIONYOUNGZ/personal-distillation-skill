@@ -85,7 +85,7 @@ class MarkdownReadingTests(unittest.TestCase):
             config=distill.read(w/'config.json');config['output']['formats']=['markdown'];distill.write(w/'config.json',config)
             distill.render(w)
             markdown=(w/'output/人物蒸馏.md').read_text(encoding='utf-8')
-            self.assertIn('## 内容研读',markdown)
+            self.assertIn('## 深度内容解读',markdown)
             self.assertNotIn('## 精选观点',markdown)
             self.assertIn(cards[0]['what'],markdown)
             self.assertIn((w/'materials/article.md').read_text(encoding='utf-8').strip(),markdown)

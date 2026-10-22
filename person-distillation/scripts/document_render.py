@@ -1,6 +1,28 @@
 """Render preserved documents without executing source HTML or scripts."""
 import html, re
 
+def has_content(document):
+    """Whether supported originals contain readable text, not just HTML wrappers."""
+    if not isinstance(document,dict):return False
+    if document.get('format') in ('text','markdown'):
+        value=document.get('text')
+        if not isinstance(value,str) or not value.strip():return False
+        if document['format']=='text':return True
+        blocks=blocks_from_markdown(value)
+    else:blocks=document.get('blocks',[])
+    if not isinstance(blocks,list):return False
+    for block in blocks:
+        if not isinstance(block,dict):continue
+        values=block.get('items',[]) if block.get('type')=='list' else [c for row in block.get('rows',[]) for c in row] if block.get('type')=='table' else [block.get('text','')]
+        if any(isinstance(value,str) and value.strip() for value in values):return True
+    return False
+
+def original_has_content(entry):
+    if not isinstance(entry,dict):return False
+    if 'document' in entry:return has_content(entry['document'])
+    if 'paragraphs' in entry:return any(isinstance(p,dict) and isinstance(p.get('text'),str) and p['text'].strip() for p in entry['paragraphs'])
+    return has_content(entry)
+
 def inline(text):
     # Links are parsed before escaping; raw HTML always remains escaped text.
     pieces=[];start=0

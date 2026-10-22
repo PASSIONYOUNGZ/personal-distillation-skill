@@ -68,10 +68,10 @@ class CollectionAndReviews(unittest.TestCase):
         with test_workspace() as w:
             _,items,cards=fixture(w);p=read(w/'.distill/profile.json')
             p['methods']=[{'id':'m','title':'One observed practice','summary':'One case supports this limited practice.','evidence':[{'item_id':items[0]['id'],'locator':'source first paragraph','kind':'observed','note':'Supports this practice'}]}]
-            write(w/'.distill/profile.json',p);spec=quality_spec(items);accept_quality(w,spec)
+            write(w/'.distill/profile.json',p);spec=quality_spec(items);spec['person_claims'][0]['method_id']='m';accept_quality(w,spec)
             cards[0]['what']='Materially changed claim';write(w/'.distill/cards.json',cards)
             with self.assertRaisesRegex(ValueError,'person/learning'):accept_quality(w,{'items':[spec['items'][0]]})
-            accept_quality(w,{'items':[spec['items'][0]],'person_claims':spec['person_claims']});self.assertTrue(quality_status(w)[0])
+            accept_quality(w,{'items':[spec['items'][0]],'person_claims':spec['person_claims'],'background_review':spec['background_review']});self.assertTrue(quality_status(w)[0])
 
     def test_record_templates_preserve_request_and_never_auto_approve(self):
         with test_workspace() as w:
@@ -81,14 +81,17 @@ class CollectionAndReviews(unittest.TestCase):
             with self.assertRaises(ValueError):accept_quality(w,q)
             accept_quality(w,quality_spec(items));self.assertEqual(draft(w,'quality',True)['items'],[])
 
-    def test_schema_upgrade_requires_new_contract_review(self):
+    def test_current_contract_rejects_old_reviews_and_missing_layers(self):
         with test_workspace() as w:
             _,items,cards=fixture(w);spec=quality_spec(items)
             for card,row in zip(cards,spec['items']):
-                card['interpretation_kind']='brief';row['comprehension']=[{'source_point':'Concrete case','evidence_locator':row['material_refs'][0],'reader_section':'正文'}]
+                row['comprehension']=[{'source_point':'Concrete case','evidence_locator':row['material_refs'][0],'reader_section':'正文'}]
             write(w/'.distill/cards.json',cards);accept_quality(w,spec)
             request=read(w/'request.json');request['schema_version']=4;write(w/'request.json',request)
+            old_receipt=read(w/'.distill/quality-review.json');old_receipt['review_contract']={'version':5};write(w/'.distill/quality-review.json',old_receipt)
             self.assertFalse(quality_status(w)[0]);self.assertEqual(len(draft(w,'quality',True)['items']),2)
+            for card in cards:card.pop('reading_layer')
+            write(w/'.distill/cards.json',cards)
             with self.assertRaisesRegex(ValueError,'reading_layer'):accept_quality(w,spec)
             for card,row in zip(cards,spec['items']):
                 card['reading_layer']='viewpoint'

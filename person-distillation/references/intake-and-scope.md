@@ -48,7 +48,7 @@ schema2／3旧任务保持原计数、默认值和接续行为，不自动切换
 用户明确“只整理这些材料”才用provided；给了两个种子链接却要求最近30项，仍是count，不能借导入缩小范围。纯导入直接读[data-and-batch的最小记录](data-and-batch.md#纯导入的最小记录)，不查无关平台、不先读实现源码或跑发布测试。以下为合成例子，替换人物、原话、文件与来源；不要把例子当真实证据。provided不填count，数量来自实际清单。
 
 ```json
-{"schema_version":2,"original_request":"只整理我提供的林示例两篇作品和背景材料","person":{"name":"林示例","seed_urls":["https://example.org/person"]},"scope":{"mode":"provided","collection_basis":"materials/manifest.json列出的两篇作品；materials/background.md只作人物背景，不计作品数","unit":"total","order":"representative","platforms":[],"timezone":"local","count_basis":"work_version"}}
+{"schema_version":4,"original_request":"只整理我提供的林示例两篇作品和背景材料","person":{"name":"林示例","seed_urls":["https://example.org/person"]},"scope":{"mode":"provided","collection_basis":"materials/manifest.json列出的两篇作品；materials/background.md只作人物背景，不计作品数","unit":"total","order":"representative","platforms":[],"timezone":"local","count_basis":"work_version"}}
 ```
 
 init后的工作区request.json是补齐默认字段和固定as_of的当前请求。后续scope-review.request复制这个完整对象，不重新手拼或拿未归一化的初始JSON代替。材料本身有来源就保留真实原链；不能为满足字段编造账号或网址。

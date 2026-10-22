@@ -99,7 +99,9 @@ class ReaderFeedback(unittest.TestCase):
         data=fixture();data['items'][1]['documents']=[]
         tree=ReaderTree(render(data,ROOT/'assets')).root
         card=tree.descendants(ident='unit-reading-1')[0]
-        self.assertIn('原文请在来源中查看',card.text())
+        self.assertEqual(card.tag,'article')
+        self.assertIn('内容来源：',card.text())
+        self.assertNotIn('查看原文',card.text())
         self.assertNotIn('old viewpoint analysis',card.text())
         self.assertTrue(card.descendants(tag='a'))
 

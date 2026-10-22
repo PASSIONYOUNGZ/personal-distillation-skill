@@ -1,6 +1,5 @@
 """Source/capability access state. These records describe observations, not credentials."""
-import copy, hashlib, json
-from collections import Counter
+import copy, hashlib
 from urllib.parse import urlparse
 
 MAINSTREAM = {'小红书', '抖音', 'B站', 'X', 'Twitter', '微博', '公众号', '微信公众号', 'YouTube', 'TikTok', 'Instagram', 'LinkedIn'}

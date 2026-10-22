@@ -5,7 +5,6 @@ inputs; decisions and page-ID deltas are reproducible, not claims of site access
 """
 from datetime import datetime, timezone
 from pathlib import Path
-from access_state import source_id
 import argparse, hashlib, json
 
 OUTCOMES = {'ok', 'network_refused', 'tool_timeout', 'timeout', 'login_required',

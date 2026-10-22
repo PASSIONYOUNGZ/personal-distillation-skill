@@ -3,8 +3,7 @@
 Python standard library only; source files, analysis and rendering are separate.
 """
 from pathlib import Path
-from collections import Counter
-import argparse,copy,hashlib,html,importlib.util,json,math,os,re,shutil,sys,tempfile,time
+import argparse, copy, hashlib, importlib.util, json, math, os, re, shutil, sys, tempfile
 from request_scope import normalize,check_selection,fix_observation_time,publication_value
 from preparation_gate import require as require_preparation,passed as preparation_passed
 
@@ -19,7 +18,7 @@ def write(path,value):
     finally:Path(name).unlink(missing_ok=True)
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def key(value):
-    if not re.fullmatch(r'[\w.-]+',value) or value in ('.','..'):raise ValueError('Unsafe item ID')
+    if not isinstance(value,str) or not re.fullmatch(r'[A-Za-z0-9_-]+',value):raise ValueError('Item ID must use ASCII letters, digits, underscore or hyphen, matching reader anchors')
     return value
 def local(w,path):
     resolved=(w/path).resolve()
@@ -98,7 +97,7 @@ def record(w,event):
 
 def doctor(w):
     config=read(w/'config.json') if (w/'config.json').exists() else {'tools':{}}
-    names={'ffmpeg':'ffmpeg','bbdown':'BBDown','yt_dlp':'yt-dlp','feishu':'lark-cli'}
+    names={'ffmpeg':'ffmpeg','bbdown':'BBDown','yt_dlp':'yt-dlp'}
     def actual(value):
         first=value[0] if isinstance(value,list) and value else value
         if not isinstance(first,str):return None
@@ -137,6 +136,7 @@ def ingest(w,file):
 def prepare(w,ids):
     require_preparation(w,'prepare')
     catalog=selected(w,read(data(w,'catalog.json')));state=read(data(w,'state.json'));report=[]
+    original_state=copy.deepcopy(state)
     wanted=set(ids.split(',')) if ids else None
     if wanted and wanted-set(x['id'] for x in catalog):raise ValueError('Unknown requested item')
     for item in catalog:
@@ -154,8 +154,9 @@ def prepare(w,ids):
             if raw_path and raw_path.exists() and sha(raw_path)!=cached.get('raw_sha256'):
                 report.append({'id':item['id'],'status':'failed','reason':'Cached original changed; preserve and review'});continue
             if raw_path and raw_path.exists() and cached.get('main',{}).get('format')==m['format']:
-                cached.update(title=item['title'],topic=item.get('topic'),sources=item['sources'],main=m)
-                write(packet_path,cached);prior['source_file']=m['file']
+                refreshed={**cached,'title':item['title'],'topic':item.get('topic'),'sources':item['sources'],'main':m}
+                if refreshed!=cached:write(packet_path,refreshed)
+                prior['source_file']=m['file']
                 report.append({'id':item['id'],'status':'reused','metadata_refreshed':True});continue
         try:
             segs=segments(path,m['format'])
@@ -172,7 +173,8 @@ def prepare(w,ids):
         write(data(w,'packets/'+item['id']+'.json'),packet)
         state['prepared'][item['id']]={'source_file':m['file'],'source_sha256':digest,'raw_sha256':sha(raw),'status':'ready'}
         report.append({'id':item['id'],'status':'ready','segments':len(segs)})
-    write(data(w,'state.json'),state);return report
+    if state!=original_state:write(data(w,'state.json'),state)
+    return report
 
 def route_plan(w):
     result=[]
@@ -236,27 +238,6 @@ def map_body(items):
         rows.append([item.get('date',''),link(item['title'],item['sources'][0]['url']),item.get('summary',''),
             '、'.join(link(s['platform'],s['url']) for s in item['sources']),recommendation(item)])
     return table(rows)
-def inline(s):
-    s=html.escape(s)
-    s=re.sub(r'\[([^\]]+)\]\((https?://[^\s]+?)\)',r'<a href="\2" target="_blank" rel="noopener">\1</a>',s)
-    s=re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',s)
-    return s
-def to_html(md):
-    blocks=[];rows=[]
-    def flush():
-        if rows:
-            head=rows[0];body=[x for x in rows[1:] if not all(re.fullmatch(r'[-: ]+',c) for c in x)]
-            blocks.append('<table><thead><tr>'+''.join('<th>'+inline(c)+'</th>' for c in head)+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<td>'+inline(c)+'</td>' for c in row)+'</tr>' for row in body)+'</tbody></table>');rows.clear()
-    for line in md.splitlines():
-        if line.startswith('|') and line.endswith('|'):rows.append([s.strip() for s in line[1:-1].split('|')]);continue
-        flush()
-        if not line.strip():continue
-        h=re.match(r'^(#{1,6}) (.+)',line)
-        if h:tag='h'+str(len(h[1]));blocks.append('<'+tag+'>'+inline(h[2])+'</'+tag+'>')
-        else:blocks.append('<p>'+inline(line)+'</p>')
-    flush()
-    return '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>个人蒸馏</title><style>body{font:16px/1.8 system-ui;max-width:1100px;margin:40px auto;padding:0 20px;color:#252525}table{width:100%;border-collapse:collapse;display:block;overflow:auto}th,td{padding:10px;border:1px solid #ddd;text-align:left;vertical-align:top}th{background:#f6f6f2}a{color:#2462a0}h2{margin-top:42px}h3{margin-top:28px}</style><body>'+''.join(blocks)+'</body></html>'
-
 def safe_output(w,file,body,state):
     path=w/'output'/file;prior=state.get(file)
     if path.exists() and (not prior or sha(path)!=prior):
@@ -478,7 +459,7 @@ def dispatch(w,args):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('command',choices=['init','amend','doctor','import','prepare','plan','review','accept-quality','accept-visual','render','verify','record']);parser.add_argument('--workspace',required=True);parser.add_argument('--person');parser.add_argument('--input');parser.add_argument('--request');parser.add_argument('--ids');parser.add_argument('--revision-evidence');args=parser.parse_args()
     w=Path(args.workspace).resolve()
-    from runlog import append,now
+    from runlog import append
     stages={'init':'intake','amend':'intake','doctor':'environment','import':'acquisition','prepare':'acquisition','plan':'acquisition','review':'review','accept-quality':'review','accept-visual':'verification','render':'render','verify':'verification','record':'resume'}
     from performance_trace import span
     with span(w if args.command!='record' else None,stages[args.command],args.command,

@@ -1,8 +1,8 @@
 # 数据、审阅、迁移与批量接续
 
-Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚本负责保存及一致性；工具成功不证明内容或范围完成。默认本地单文件HTML，飞书只有该用户实际配置/授权才使用。
+Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚本负责保存及一致性；工具成功不证明内容或范围完成。默认交付本地单文件HTML，原稿、记录与阅读成果分开保存。
 
-## 记录合同（新request为4；各回执保留自身schema）
+## 记录合同（request统一为4；其他记录的schema独立计数）
 
 | 文件/对象 | 必须表达 |
 | --- | --- |
@@ -16,7 +16,7 @@ Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚
 | publication-review | 仅当最终reader-data改动标准构建的原文时，绑定变化项的完整来源与派生展示；full/excerpt/link_only分清，不用render-state代替审阅 |
 | scope-review | 当前归一request、as_of/固定scope_as_of、时区、selected_ids、同版与日期依据、各source_id目录证据或样本/提供集合证明 |
 | visual-review | 当前HTML SHA；preview_check记录预览状态，实际做过才附工具／视口／交互证据；offline_check独立记录。策略未执行或未测不冒充通过，实际failed不能按可交付成品放行 |
-| run-log/checkpoint | 步骤、动作、简短选择依据、耗时、产物、失败/待办/下一动作、schema/Skill版本，不留隐藏推理或凭据 |
+| run-log/checkpoint | 步骤、动作、简短选择依据、耗时、产物、失败/待办/下一动作、数据schema，不留隐藏推理或凭据 |
 
 材料format支持text/markdown/document/srt/segments。document是结构化blocks（heading/paragraph/quote/list/code/table）；文章保留章节、缩进、表格、链接，不塞成speech。视频稿保留source_segments和时间定位；阅读分组只作安全空白排版。校正版从不可变raw和有依据edits重放；改数字/否定须sensitive_change_verified，protected_phrases保留。
 
@@ -24,7 +24,7 @@ sources至少platform、发布id、url及所属账号source_id；没有稳定账
 
 cards文本类型：summary、what、use、workflow、thinking、limit/limits、directions、score_reason、result接受字符串或纯字符串数组；数组表示有序段落，构建HTML和Markdown时统一用双换行连接，不打印Python列表表示。learning是并列学习点，推荐直接写字符串数组；兼容单个字符串并转为单项数组，空值时可从workflow逐项取得。可选字段None视空；不接收嵌套数组、对象或数字混排。item_id、level仍为字符串，evidence仍为来源对象数组。直接维护output/reader-data.json时使用规范字符串字段与learning数组，不把cards兼容形式直接传给独立渲染器。
 
-analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留检索摘要，但不能覆盖详细小节。新请求使用schema_version=4，cards逐项明确reading_layer=deep/viewpoint；深读有analysis_sections，观点允许what，旧interpretation_kind=brief继续兼容。.distill/screening.json记录在线初筛，minimum_stars默认3；提供集合默认保留用户给定项。quality-spec.items.comprehension为[{source_point,evidence_locator,reader_section}]，映射主要原作内容到实际页面小节。所有4版审阅（包括提供集合）需要comprehension，不以minimum_stars=1关闭理解审阅。旧2/3任务继续接续，但升级质量合同后需实际补核，不自动沿用旧“通过”状态。
+analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留检索摘要，但不能覆盖详细小节。请求使用schema_version=4，cards逐项明确reading_layer=deep/viewpoint；深读有analysis_sections，观点以summary常显判断，允许what保存内部理解，不再使用interpretation_kind旧分类。.distill/screening.json记录在线初筛，minimum_stars默认3；提供集合默认保留用户给定项。quality-spec.items.comprehension为[{source_point,evidence_locator,reader_section}]，映射主要原作内容到实际页面小节。所有审阅（包括提供集合）需要comprehension，不以minimum_stars=1关闭理解审阅。旧2/3请求不再执行，保留原稿和用户修改，在独立目录建立当前任务。
 
 可选`.distill/reading-units.json`是阅读单元对象数组，结构见[reader-data](reader-data.md)。每份入选来源在一个主要单元中出现，聚合不改变作品计数；完整来源卡继续保留。quality-spec另加unit_reviews：
 
@@ -32,7 +32,7 @@ analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}
 {"unit_reviews":[{"unit_id":"view-a","checks":[{"claim":"据本次原作核实的聚合判断","evidence_locator":"材料与实际段落位置","status":"qualified"}],"comprehension":[{"item_id":"source-a","source_point":"来源中的具体判断","evidence_locator":"原文位置","reader_section":"观点"}]}]}
 ```
 
-每个单元的所有item_ids都需至少一个实际要点映射；deep的reader_section为真实analysis_sections标题或正文/背景/归属，viewpoint必须为“观点”，对应实际常显summary，不能映射到不再展示的分析段。只填checks标签不能代替理解。schema 4请求的质量合同现为6；旧5合同的未变源卡、单元与人物checks可复用，只补下面的独立背景审阅，不自动补造通过。旧4及更早合同需核清实际阅读表达后接受；旧schema 2/3范围与合同保持兼容。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
+每个单元的所有item_ids都需至少一个实际要点映射；deep的reader_section为真实analysis_sections标题或正文/背景/归属，viewpoint必须为“观点”，对应实际常显summary，不能映射到不再展示的分析段。只填checks标签不能代替理解。请求schema4只接受质量审阅合同6；未变回执仅在同一现行合同内复用。旧合同不再提供迁移放行；重用旧材料时按当前内容、背景和方法要求实际审阅。源材料/卡片或聚合文本变化使相关单元回执失效，未变的可复用。profile.methods的证据引用纳入person_fingerprint；4版person_claims对每条方法带method_id，并核实际机制、归属和边界。只核一次实践不能写成长期习惯。
 
 schema4的quality-spec顶层另加background_review，防止只对作品作人物延伸却遗漏整体经历。coverage说明已探查的公开角色/阶段与边界；sources列实际所读来源及定位；timeline_checks覆盖现有timeline的每个零基索引，claim解释该节点的人物经历意义及日期依据，不只复述标题。例：
 
@@ -130,10 +130,10 @@ import输入是作品数组，以下展示一项；另一项使用独立id与文
 {"items":["sample-a","sample-b"],"status":"final"}
 ```
 
-两篇分别形成cards，profile按[阅读数据](reader-data.md)写biography、背景来源与末尾学习方向。下例是`cards.json`的一项结构，文字必须据对应原文写，不自动扩写模板：
+两篇分别形成cards，profile按[阅读数据](reader-data.md)写biography、背景来源与末尾学习方向。新导入沿schema 4逐项填写reading_layer；下例仅演示一个合成深读卡，真实分节与文字依据原材料填写：
 
 ```json
-[{"item_id":"sample-a","summary":"作者讨论读者不理解操作说明时，如何定位具体误解。例子先保存原句，再根据读者的问题比较局部修改。","what":"原文先保留让读者停下的句子，记录读者把它理解成了什么，再比较新旧表达。这个例子说明改写应对应实际问题，而不是凭编辑者感觉重写整篇。","learning":["修改前保留原句和实际问题，便于比较。"],"limits":"合成演示，没有真实效果验证。","evidence":[{"label":"合成原文","url":"https://example.org/a"}],"level":"简单解析"}]
+[{"item_id":"sample-a","summary":"作者讨论读者不理解操作说明时，如何定位具体误解。例子先保存原句，再根据读者的问题比较局部修改。","what":"原文先保留让读者停下的句子，记录读者把它理解成了什么，再比较新旧表达。这个例子说明改写应对应实际问题，而不是凭编辑者感觉重写整篇。","learning":["修改前保留原句和实际问题，便于比较。"],"limits":"合成演示，没有真实效果验证。","evidence":[{"label":"合成原文","url":"https://example.org/a"}],"level":"简单解析","reading_layer":"deep","analysis_sections":[{"title":"先定位读者的具体误解","paragraphs":["原文先保留让读者停下的句子，记录读者把它理解成了什么，再比较改写。保存原句与实际误解，让修改对应已经发现的问题。"]},{"title":"比较局部修改是否回应问题","paragraphs":["例子保留原句与修改稿进行比较。这个做法先核对具体解释缺口，而不是仅凭编辑者感觉重写整篇。"]}]}]
 ```
 
 逐项核完来源、版本与清单后，按下面的Python片段生成`.distill/scope-review.json`。WORKSPACE换为本次目录；as_of是这次实际审阅时刻，scope_as_of来自init固定值，不改原请求。
@@ -156,11 +156,13 @@ review = {
 (w / '.distill/scope-review.json').write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding='utf-8')
 ```
 
-纯provided不填原生channels边界或ordering_evidence来假装“最近N项”；有未取得的提供材料，provided_set_complete不能为true。实际全文理解后写quality-spec，items覆盖全部selection。material_refs严格列本项全部materials的material_id（有则用）或file；人物结论另核person_claims。以下状态qualified是合成材料局限，不等于未读可过：
+纯provided不填原生channels边界或ordering_evidence来假装“最近N项”；有未取得的提供材料，provided_set_complete不能为true。实际全文理解后，用本页record_templates.py quality生成待填审阅草稿；items覆盖selection，material_refs列出全部材料，comprehension映射到实际正文小节，人物结论填写person_claims及background_review。所有状态来自本次读取，不照搬合成例子的qualified。
 
-```json
-{"items":[{"item_id":"sample-a","material_refs":["materials/a.md"],"coverage":"合成文章全文已逐段核读","remaining_gap":"无真实人物或效果证据，页面明确合成局限","checks":[{"claim":"该例讨论先保存原句，再定位读者误解并比较改写","evidence_locator":"materials/a.md，第1—3段","status":"qualified"}]},{"item_id":"sample-b","material_refs":["materials/b.md"],"coverage":"合成文章全文已逐段核读","remaining_gap":"无真实效果验证，页面明确合成局限","checks":[{"claim":"该例讨论核对改写的数字、否定词和专名","evidence_locator":"materials/b.md，第1—2段","status":"qualified"}]}],"person_claims":[{"claim":"人物为合成文档设计师，背景经历与这两篇选集时间独立；不推断真实能力","evidence_locator":"materials/background.md及notes/background.md","status":"qualified"}]}
+```text
+python <skill>/scripts/record_templates.py quality --workspace <workspace> --output <new-quality-spec.json> --changed-only
 ```
+
+填完真实观察后才运行accept-quality；字段与背景审阅的例子沿本页当前合同。
 
 执行顺序沿前节现有命令：init→记录本地实际接入→preflight→import→写selection→prepare→写cards/profile及三个notes→写scope-review和quality-spec→accept-quality→render→如实记录预览／离线→verify。正常数据直接使用这些合同；只有实际报错或字段不符才读相关源码，不先逐个读实现与测试找字段。
 

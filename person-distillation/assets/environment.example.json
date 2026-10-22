@@ -1,7 +1,0 @@
-{
-  "note": "可选使用者配置，首次为空。Agent在此使用者的机器完成安装和验证后填实际路径，不从作者机器复制。",
-  "tools": {},
-  "models": {},
-  "tool_search_dirs": [],
-  "verified_at": null
-}

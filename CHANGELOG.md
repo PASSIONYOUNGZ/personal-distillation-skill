@@ -1,5 +1,14 @@
 # Updates
 
+## 2026.10.22.3
+
+- Preserve meaningful whitespace, code indentation and paragraph boundaries in publication-original comparisons. Whitespace-only originals fail validation and do not create empty viewpoint disclosures; real short originals remain supported.
+- Use request schema4 and quality-review contract6 consistently; remove obsolete defaults and old-contract passing-review reuse. Preserve source artifacts and user edits; same-current-contract reuse and explicit local continuation remain supported.
+- Retain bundled public project-developer attribution and remove private attribution disabling/replacement configuration. Remove retired Feishu delivery resources and stale delivery instructions; keep WeChat source research and Markdown output.
+- Distinguish collection indexing from material availability, align imported item IDs with reader anchors, remove unused imports, and reduce redundant unchanged prepare writes and report computations without changing their results.
+- Include eight usage scenarios and keep reading/highlighting/export interactions. No per-task Skill-version tracking or automatic background research is added.
+- Publish the approved 84-file candidate without changing its Skill files or archive bytes. 241 Python tests, 19 JavaScript logic tests, a documented schema4 import flow and a 30-work local-file continuation test passed. No new online research, ASR, fresh-machine, browser-visual or actual offline-opening pass is claimed.
+
 ## 2026.10.21.1
 
 - Restore viewpoint emphasis for ordinary content cards: preserve highlights through the build and reading-unit adapter into both HTML and Markdown, with exact-phrase validation and unchanged originals.

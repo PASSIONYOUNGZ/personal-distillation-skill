@@ -12,14 +12,15 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
-from document_render import render_document
+from document_render import render_document,original_has_content
 from content_analysis import sections as analysis_sections, text as analysis_text
 from reading_units import reading_units, methods as reviewed_methods, topic_order, summary_highlights
 
 ASSETS = Path(__file__).resolve().parents[1] / 'assets'
 CSS = (ASSETS / 'reader.css').read_text(encoding='utf-8')
 JS = (ASSETS / 'reader.js').read_text(encoding='utf-8')
-PROJECT_DEVELOPER = json.loads((ASSETS/'project-developer.json').read_text(encoding='utf-8')) if (ASSETS/'project-developer.json').is_file() else {}
+JS += '\n' + (ASSETS / 'reader-annotations.js').read_text(encoding='utf-8')
+PROJECT_DEVELOPER = json.loads((ASSETS/'project-developer.json').read_text(encoding='utf-8'))
 PRESETS = [('晴空','#3b82f6'),('鸢尾','#8b5cf6'),('樱桃','#ef6b99'),('蜜桃','#f28e55'),
            ('柠檬','#d7b42b'),('海盐','#0caab5'),('薄荷','#3dae82'),('莓紫','#c15dc5')]
 PALETTE = ['#e95b68','#ed795e','#f09b4f','#deb63e','#aec24c','#70bb6c',
@@ -317,7 +318,8 @@ def viewpoint_originals(members):
     """Show preserved original text, never substitute an interpretation for it."""
     chunks=[]
     for item in members:
-        documents=list(item.get('documents',[]))+list(item.get('transcripts',[]))
+        all_documents=list(item.get('documents',[]))+list(item.get('transcripts',[]))
+        documents=[d for d in all_documents if original_has_content(d)]
         chunks+=['<div class="viewpoint-original" data-original-item="'+esc(item['id'])+'">']
         if documents:
             for document in documents:
@@ -328,11 +330,9 @@ def viewpoint_originals(members):
                     chunks+=['<div class="original-speech">'+''.join('<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in document['paragraphs'])+'</div>']
                 else:
                     chunks+=['<div class="source-document">'+render_document(document.get('document',document))+'</div>']
-        else:
-            chunks+=['<p class="original-unavailable">原文请在来源中查看。</p>']
         # Include explicit original/quotation URLs even when they are absent from
         # the work's ordinary platform entries; never relabel them as that work.
-        originals=[{'url':d['source_url'],'platform':d.get('platform','')} for d in documents if d.get('source_url')]
+        originals=[{'url':d['source_url'],'platform':d.get('platform','')} for d in all_documents if d.get('source_url')]
         chunks+=['<div class="sources original-source">'+content_sources([item],originals)+'</div>']
         chunks+=['</div>']
     return ''.join(chunks)
@@ -373,6 +373,9 @@ def render_unit(unit, by_id, base, opened=False):
     anchors=''.join('<span class="source-anchor" id="note-'+esc(i['id'])+'" data-unit-target="unit-'+esc(unit['id'])+'"></span>' for i in members)
     if compact:
         statement=emphasize(unit['summary'],summary_highlights(unit['summary'],unit.get('highlights',[])))
+        if not any(original_has_content(d) for item in members for d in item.get('documents',[])+item.get('transcripts',[])):
+            originals=[{'url':d['source_url'],'platform':d.get('platform','')} for item in members for d in item.get('documents',[])+item.get('transcripts',[]) if d.get('source_url')]
+            return '<article class="reading-unit viewpoint-card"'+attrs+'>'+anchors+'<div class="viewpoint-summary"><span class="viewpoint-statement">'+statement+'</span><span class="viewpoint-source-links">'+content_sources(members,originals)+'</span></div></article>'
         return '<details class="reading-unit viewpoint-card"'+attrs+'><summary><span class="viewpoint-statement">'+statement+'</span>'+card_disclosure(body_id,compact=True)+'</summary><div class="viewpoint-body" id="'+esc(body_id)+'">'+anchors+viewpoint_originals(members)+'</div></details>'
     tag='details'
     cover_class=' has-unit-cover' if not compact and len(members)==1 and members[0].get('cover') else ''
@@ -430,15 +433,13 @@ def render_methods(methods,by_id):
     return ''.join(chunks)+'</div>'
 
 
-def project_brand(creator, base, symbol):
-    if not creator and PROJECT_DEVELOPER:creator=PROJECT_DEVELOPER;base=ASSETS
-    """Optional project attribution, distinct from the researched person's accounts."""
+def project_brand(symbol):
+    """Published project attribution; task/user settings do not replace it."""
+    creator=PROJECT_DEVELOPER;base=ASSETS
     avatar = creator.get('avatar')
     if avatar:
         symbol = '<img class="brand-avatar" src="'+image(avatar, base)+'" alt="项目作者头像">'
     name = creator.get('name', '').strip()
-    if not creator:
-        return '<div class="brand-block"><a class="brand" href="#top" aria-label="个人蒸馏Skill"><span class="brand-mark">'+symbol+'</span><span class="brand-wordmark"><strong>个人蒸馏Skill</strong></span></a></div>'
     role = creator.get('role') or '项目制作'
     identity = '<span class="creator-role">'+esc(role)+('：' if name else '')+'</span>'+('<strong class="creator-name">'+esc(name)+'</strong>' if name else '')
     profile = '<div class="creator-profile"><span class="creator-avatar">'+symbol+'</span><div class="creator-identity">'+identity+'</div></div>'
@@ -505,7 +506,7 @@ def render(data, base):
     def heading(ident, title, description=''):
         return section(f'{nav_numbers.get(ident,0):02}',ident,title,description)
     symbol = '<svg class="brand-symbol" aria-hidden="true" viewBox="0 0 40 40" fill="none"><path d="m20 3 9 10-9 5-9-5Z" fill="currentColor"/><path d="m37 20-10 9-5-9 5-9Z" fill="currentColor" opacity=".72"/><path d="m20 37-9-10 9-5 9 5Z" fill="currentColor" opacity=".88"/><path d="m3 20 10-9 5 9-5 9Z" fill="currentColor" opacity=".42"/><path d="m20 16 4 4-4 4-4-4Z" fill="currentColor" opacity=".2"/></svg>'
-    chunks += ['<aside class="rail">'+project_brand(data.get('creator') or {},base,symbol)+'<nav aria-label="阅读目录">'+''.join(f'<a href="#{key}"><span class="nav-number">{nav_numbers[key]:02}</span>{label}</a>' for n,(key,label) in enumerate(navigation,1))+'</nav>'+theme_controls()+'</aside><main class="main">']
+    chunks += ['<aside class="rail">'+project_brand(symbol)+'<nav aria-label="阅读目录">'+''.join(f'<a href="#{key}"><span class="nav-number">{nav_numbers[key]:02}</span>{label}</a>' for n,(key,label) in enumerate(navigation,1))+'</nav>'+theme_controls()+'</aside><main class="main">']
     hero, visual = profile.get('hero_image'), ''
     if hero:
         visual = f'<figure><img src="{image(hero,base)}" alt="{esc(hero["caption"])}"><figcaption>{esc(hero["caption"])} · {link("查看原作",hero["url"])}</figcaption></figure>'
@@ -678,7 +679,7 @@ def render(data, base):
         for d in profile['directions']:
             chunks += ['<article class="direction"><h3>'+esc(d['title'])+'</h3><span class="label">先从这些内容学</span><p>'+esc(d['direct'])+'</p><span class="label">用到自己的事情上</span><p>'+esc(d['transfer'])+'</p><span class="label">想深入，还可以补</span><p>'+esc(d['foundation'])+'</p><div class="evidence">相关内容：'+evidence(d['items'])+'</div></article>']
         chunks += ['</div></section>']
-    chunks += ['</main><a class="backtop" href="#top" hidden><span class="backtop-icon">'+icon('up',17)+'</span>回到顶部</a><dialog id="image-dialog" aria-label="图片放大查看"><button aria-label="关闭大图">关闭 ×</button><img alt=""></dialog>'+palette_dialog()+'<script>'+JS+'</script></body></html>']
+    chunks += ['</main><dialog id="image-dialog" aria-label="图片放大查看"><button aria-label="关闭大图">关闭 ×</button><img alt=""></dialog>'+palette_dialog()+'<script>'+JS+'</script></body></html>']
     return ''.join(chunks)
 
 

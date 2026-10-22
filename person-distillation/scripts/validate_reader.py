@@ -60,8 +60,9 @@ def validate(data,base):
             if 'source_url' in t and not url(t['source_url']):errors.append(ident+': invalid original source URL')
             if is_document:
                 try:
-                    from document_render import render_document
-                    if not render_document(t['document']):errors.append(ident+': empty document')
+                    from document_render import render_document,has_content
+                    render_document(t['document'])
+                    if not has_content(t['document']):errors.append(ident+': empty document')
                 except (KeyError,ValueError,TypeError):errors.append(ident+': invalid document')
             elif not t.get('paragraphs') or any(not isinstance(x.get('text'),str) or not x['text'].strip() for x in t.get('paragraphs',[])):errors.append(ident+': invalid transcript')
     for group in ('traits','directions','topic_navigation'):
@@ -106,15 +107,6 @@ def validate(data,base):
         if not isinstance(selected,list) or any(not isinstance(v,str) for v in selected):errors.append('Invalid recent_items')
         elif len(selected)>3 or len(set(selected))!=len(selected) or set(selected)-set(ids):errors.append('Invalid recent_items selection')
         elif any(not i.get('cover') or not str(i.get('what') or '').strip() for i in items if i.get('id') in selected):errors.append('recent_items needs original covers and content interpretation')
-    creator=data.get('creator',{})
-    if not isinstance(creator,dict):return errors+['Creator must be an object']
-    if creator and (not isinstance(creator.get('name'),str) or not creator['name'].strip()):errors.append('Creator needs a readable name')
-    if 'role' in creator and not isinstance(creator['role'],str):errors.append('Invalid creator role')
-    if creator.get('avatar'):pic(creator['avatar'],'creator',True)
-    if not isinstance(creator.get('links',[]),list):errors.append('Creator links must be a list')
-    else:
-        for account in creator.get('links',[]):
-            if not isinstance(account,dict) or not account.get('label') or not url(account.get('url')):errors.append('Invalid creator link')
     return errors
 
 class Structure(HTMLParser):
@@ -235,7 +227,6 @@ def inspect_html(data,body):
                     if units is not None else [section for item in data['items'] for section in item.get('analysis_sections',[])])
     expected_figures=sum(len(section.get('images',[])) for section in shown_sections)
     if body.count('class="analysis-figure"')!=expected_figures:errors.append('Inline analysis image count differs')
-    if data.get('creator',{}).get('name'):required_text.append(data['creator']['name'])
     if any(compact(text) not in visible for text in required_text):errors.append('Reviewed text missing from visible HTML')
     return errors
 

@@ -9,7 +9,7 @@
 先用现有Python及下方最小请求init；不要阅读脚本源码来猜启动参数。未知参数先--help，确有异常再定点读相关函数。无Python时按同字段落盘，不等待安装完成才探接入。
 
 ```json
-{"original_request":"蒸馏某某最近30项","person":{"name":"某某","seed_urls":[]},"scope":{"mode":"count","count":30,"unit":"total","order":"latest","platforms":[],"timezone":"使用者实际时区","as_of":"本次实际ISO8601时刻，含UTC偏移"}}
+{"schema_version":4,"original_request":"蒸馏某某最近30项","person":{"name":"某某","seed_urls":[]},"scope":{"mode":"count","count":30,"unit":"total","order":"latest","platforms":[],"timezone":"使用者实际时区","as_of":"本次实际ISO8601时刻，含UTC偏移"}}
 ```
 
 目录由Agent自动选定，替换人物、范围、时区和实际as_of后保存request.json，再执行本页末尾init；无需让用户提供旧目录。as_of由当前时钟与使用者时区确定并含实际偏移（例如格式YYYY-MM-DDTHH:mm:ss+08:00，不能照抄日期或假定所有人+08）。显式时刻可避免新Windows缺IANA时区数据库而初始化失败；不要为此让用户再答范围问卷。跨夏令时历史需真实时区规则，不能用当前偏移替代所有历史日期。详细计数变体才读intake-and-scope。init自动生成checkpoint，不为开始而手工重建整套空表。

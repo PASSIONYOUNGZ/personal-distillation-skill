@@ -1,7 +1,7 @@
 """Offline adversarial regression: empty environment, stalled routes and scope."""
 from pathlib import Path
 from unittest.mock import patch
-import copy, json, os, sys, unittest
+import copy, os, sys, unittest
 import acquisition, bootstrap, distill, preflight
 from request_scope import normalize
 from scope_coverage import audit
@@ -20,7 +20,7 @@ def observation(**changes):
 
 
 def covered_fixture():
-    request=normalize({'person':{'name':'林示例'},'scope':{'mode':'count','count':2}})
+    request=normalize({'person':{'name':'林示例'},'scope':{'mode':'count','count':2,'minimum_stars':1}})
     items=[{'id':str(n),'date':'2026-10-'+str(13-n),'sources':[{'platform':'A','url':'https://example.org/'+str(n)}]} for n in (1,2)]
     selection={'items':['1','2'],'status':'final'}
     ledger={'discovery_reviewed':True,'discovery_evidence':['synthetic-identity'],

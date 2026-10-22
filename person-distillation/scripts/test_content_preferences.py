@@ -1,5 +1,5 @@
 """Bounded content preferences do not weaken exact scope or invent editorial value."""
-import copy,json,unittest
+import json, unittest
 from request_scope import normalize,normalize_kind,check_selection
 from content_screening import suggest_candidates,workspace_audit
 from scope_coverage import audit as coverage_audit
@@ -35,12 +35,6 @@ def save(w,req,items,ids,records,**selection):
 
 
 class ContentPreferences(unittest.TestCase):
-    def test_old_requests_keep_old_defaults_without_implicit_preferences(self):
-        for version in (2,3):
-            original={'schema_version':version,'person':{'name':'Synthetic'},'scope':{'mode':'count','count':2}}
-            result=normalize(original)
-            self.assertNotIn('content_preferences',result['scope']);self.assertEqual(result['scope']['count'],2)
-            self.assertEqual(result['scope'].get('minimum_stars'),3 if version==3 else None)
 
     def test_normalized_forms_have_one_alias_map_and_unknown_is_not_a_form(self):
         result=request(content_preferences={'prefer_kinds':['视频','Video'],'only_kinds':['video','图文','note']})

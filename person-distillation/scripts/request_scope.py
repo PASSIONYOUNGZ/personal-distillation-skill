@@ -29,8 +29,8 @@ def kind_decision(scope, item):
 
 def normalize(value):
     value = copy.deepcopy(value)
-    version = value.setdefault('schema_version', 2)
-    if type(version) is not int or version not in (2, 3, 4): raise ValueError('Unsupported request schema_version')
+    version = value.setdefault('schema_version', 4)
+    if type(version) is not int or version != 4: raise ValueError('Only request schema_version 4 is supported; preserve old artifacts and create a current request in a new workspace')
     person = value.get('person', {})
     if not isinstance(person, dict): raise ValueError('Invalid person')
     urls = person.setdefault('seed_urls', [])
@@ -63,32 +63,29 @@ def normalize(value):
         raise ValueError('Provided scope needs a material-set description or manifest')
     s.setdefault('unit', 'total'); s.setdefault('order', 'representative' if mode in ('representative', 'provided') else 'latest')
     s.setdefault('platforms', []); s.setdefault('timezone', 'local'); s.setdefault('count_basis', 'work_version')
-    if value.get('schema_version',2)>=3:s.setdefault('minimum_stars',1 if mode=='provided' else 3)
+    s.setdefault('minimum_stars',1 if mode=='provided' else 3)
     if 'minimum_stars' in s and (type(s['minimum_stars']) is not int or not 1<=s['minimum_stars']<=5):raise ValueError('minimum_stars must be 1..5')
     if s['unit'] not in ('total', 'per_platform') or s['order'] not in ('latest', 'representative'):
         raise ValueError('Invalid unit/order')
-    if version >= 4:
-        preferences = s.setdefault('content_preferences', {})
-        if not isinstance(preferences, dict): raise ValueError('content_preferences must be an object')
-        if set(preferences) - {'prefer_kinds', 'only_kinds', 'balance'}: raise ValueError('Unknown content preference')
-        for field in ('prefer_kinds', 'only_kinds'):
-            declared = preferences.setdefault(field, [])
-            if not isinstance(declared, list): raise ValueError(field + ' must be a list of content forms')
-            kinds = [normalize_kind(kind) for kind in declared]
-            if any(kind is None for kind in kinds): raise ValueError(field + ' contains unknown content form')
-            preferences[field] = list(dict.fromkeys(kinds))
-        preferences.setdefault('balance', 'balanced')
-        if preferences['balance'] not in ('balanced', 'depth', 'viewpoints'): raise ValueError('Invalid content balance')
-        if preferences['only_kinds'] and set(preferences['prefer_kinds']) - set(preferences['only_kinds']):
-            raise ValueError('Preferred content forms conflict with only_kinds')
-        if 'viewpoint_limit' in s and (type(s['viewpoint_limit']) is not int or s['viewpoint_limit'] < 0):
-            raise ValueError('viewpoint_limit must be a nonnegative reading-unit limit, not a source count')
-        if mode in ('count', 'count_in_time') and s['order'] != 'latest':
-            raise ValueError('Exact counts retain latest order; use bounded representative sample_budget for balanced selection')
-        if mode == 'representative' and s['order'] != 'representative':
-            raise ValueError('Representative scope requires representative order')
-    elif 'content_preferences' in s or 'viewpoint_limit' in s:
-        raise ValueError('Content preferences and viewpoint_limit require request schema_version 4')
+    preferences = s.setdefault('content_preferences', {})
+    if not isinstance(preferences, dict): raise ValueError('content_preferences must be an object')
+    if set(preferences) - {'prefer_kinds', 'only_kinds', 'balance'}: raise ValueError('Unknown content preference')
+    for field in ('prefer_kinds', 'only_kinds'):
+        declared = preferences.setdefault(field, [])
+        if not isinstance(declared, list): raise ValueError(field + ' must be a list of content forms')
+        kinds = [normalize_kind(kind) for kind in declared]
+        if any(kind is None for kind in kinds): raise ValueError(field + ' contains unknown content form')
+        preferences[field] = list(dict.fromkeys(kinds))
+    preferences.setdefault('balance', 'balanced')
+    if preferences['balance'] not in ('balanced', 'depth', 'viewpoints'): raise ValueError('Invalid content balance')
+    if preferences['only_kinds'] and set(preferences['prefer_kinds']) - set(preferences['only_kinds']):
+        raise ValueError('Preferred content forms conflict with only_kinds')
+    if 'viewpoint_limit' in s and (type(s['viewpoint_limit']) is not int or s['viewpoint_limit'] < 0):
+        raise ValueError('viewpoint_limit must be a nonnegative reading-unit limit, not a source count')
+    if mode in ('count', 'count_in_time') and s['order'] != 'latest':
+        raise ValueError('Exact counts retain latest order; use bounded representative sample_budget for balanced selection')
+    if mode == 'representative' and s['order'] != 'representative':
+        raise ValueError('Representative scope requires representative order')
     if s['count_basis'] not in ('work_version', 'publication'): raise ValueError('Invalid count_basis')
     if not isinstance(s['platforms'], list) or any(not isinstance(p, str) or not p.strip() for p in s['platforms']): raise ValueError('Invalid platforms')
     if s.get('as_of'):

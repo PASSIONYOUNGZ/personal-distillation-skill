@@ -1,13 +1,12 @@
 """Adversarial contract regression. All people, receipts and access are synthetic."""
-from pathlib import Path
 from unittest.mock import patch
-import copy, json, os, unittest
-import acquisition, distill, preflight
+import copy, json, unittest
+import acquisition, distill
 from access_state import assess
 from preparation_gate import save, passed, require
 from request_scope import normalize, publication_value
 from scope_coverage import audit
-from evidence_review import accept_quality, quality_status, accept_visual, correction
+from evidence_review import accept_quality, quality_status, correction
 from build_reader import build
 from render_reader import render
 from test_pipeline import ROOT, test_workspace
@@ -43,6 +42,7 @@ def fixture(w):
         i.pop('transcripts',None);i['materials']=[{'material_id':ident+'-main','main':True,'file':name,'format':fmt,'role':role,'platform':'A','url':i['sources'][0]['url'],'coverage':'synthetic complete voice/text','visual_checked':False}]
         cards.append({'item_id':ident,'summary':i['summary'],'what':i['what'],'use':'USE_FIELD_MARKER','thinking':'THINKING_FIELD_MARKER',
                       'directions':'DIRECTIONS_FIELD_MARKER','learning':i['learning'],'limits':i['limit'],'level':'简单解析',
+                      'reading_layer':'deep','analysis_sections':[{'title':'正文','paragraphs':[i['what']]}],
                       'recommendation_stars':None,'evidence':[{'label':'Synthetic source','url':i['sources'][0]['url']}]})
     distill.write(w/'incoming.json',items);distill.ingest(w,w/'incoming.json')
     distill.write(w/'.distill/selection.json',{'items':[i['id'] for i in items],'status':'final'})
@@ -50,13 +50,42 @@ def fixture(w):
     for name in ('background','portrait','directions'):(w/'notes'/f'{name}.md').write_text('Synthetic example, not a factual person study. Evidence qualification retained.',encoding='utf-8')
     return request,items,cards
 
+def synthetic_background():
+    profile=distill.read(ROOT/'assets/reader.example.json')['profile']
+    return {'coverage':'Synthetic overall role history checked, separately from works.',
+            'sources':[{'url':'https://example.org/about','evidence_locator':'notes/background.md'}],
+            'timeline_checks':[{'timeline_index':n,'claim':'Synthetic career transition and event date checked.',
+                'evidence_locator':'notes/background.md','status':'qualified'} for n,_ in enumerate(profile.get('timeline',[]))],
+            **({'absence_checks':[{'claim':'Synthetic background has no dated event.','evidence_locator':'notes/background.md','status':'qualified'}]} if not profile.get('timeline') else {}),
+            'remaining_gap':'Synthetic only.'}
+
+
 def quality_spec(items):
     return {'items':[{'item_id':i['id'],'material_refs':[m.get('material_id') or m['file'] for m in i['materials']],
+         'comprehension':[{'source_point':'Synthetic source explanation','evidence_locator':i['materials'][0]['file'],'reader_section':'正文'}],
          'coverage':'Synthetic full text/voice','remaining_gap':'Synthetic video visual gap retained',
          'checks':[{'claim':'Synthetic source understanding, not real research','status':'qualified','evidence_locator':i['materials'][0]['file']}]} for i in items],
+         'background_review':synthetic_background(),
          'person_claims':[{'claim':'Synthetic profile only','status':'qualified','evidence_locator':'notes/portrait.md'}]}
 
 class Contracts(unittest.TestCase):
+    def test_new_requests_default_to_current_contract(self):
+        import re
+        from evidence_review import review_contract
+        examples=[]
+        for name in ('preparation.md','intake-and-scope.md'):
+            text=(ROOT/'references'/name).read_text(encoding='utf-8')
+            for code in re.findall(r'```json\s*\n(.*?)\n```',text,re.S):
+                value=json.loads(code)
+                if not isinstance(value,dict) or 'person' not in value or 'scope' not in value:continue
+                scope=value['scope'];scope['timezone']='Asia/Shanghai';scope['as_of']='2026-10-22T12:00:00+08:00'
+                request=normalize(value);examples.append(request)
+                self.assertEqual(request['schema_version'],4)
+                self.assertEqual(review_contract(request)['version'],6)
+                self.assertEqual(request['scope']['minimum_stars'],1 if scope['mode']=='provided' else 3)
+        self.assertGreaterEqual(len(examples),3)
+        self.assertEqual(normalize({'person':{'name':'Current'},'scope':{'mode':'count','count':1}})['schema_version'],4)
+
     def test_explicit_observation_offset_needs_no_timezone_database(self):
         from request_scope import fix_observation_time, ZoneInfoNotFoundError
         r={'person':{'name':'示例'},'scope':{'mode':'count','count':1,'timezone':'Asia/Shanghai','as_of':'2026-10-14T17:00:00+08:00'}}
@@ -131,7 +160,7 @@ class Contracts(unittest.TestCase):
             _,items,cards=fixture(w);spec=quality_spec(items);accept_quality(w,spec)
             cards[0]['thinking']='new qualified interpretation';distill.write(w/'.distill/cards.json',cards)
             self.assertFalse(quality_status(w)[0])
-            accept_quality(w,{'items':spec['items'][:1],'person_claims':spec['person_claims']})
+            accept_quality(w,{'items':spec['items'][:1],'person_claims':spec['person_claims'],'background_review':spec['background_review']})
             self.assertTrue(quality_status(w)[0])
 
     def test_empty_person_modules_are_omitted_without_broken_navigation(self):
@@ -241,7 +270,7 @@ class Contracts(unittest.TestCase):
 
     def test_html_bridge_preserves_analysis_and_article_structure(self):
         with test_workspace() as w:
-            fixture(w);data=build(w);body=render(data,w/'output')
+            fixture(w);data=build(w);data['items'][0]['reading_layer']='viewpoint';body=render(data,w/'output')
             for marker in ('USE_FIELD_MARKER','THINKING_FIELD_MARKER','DIRECTIONS_FIELD_MARKER','<th>A</th>','    keep =','&lt;script&gt;'):
                 self.assertIn(marker,body)
             self.assertNotIn('<script>window.bad',body)

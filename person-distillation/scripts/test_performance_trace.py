@@ -1,7 +1,7 @@
 """Timing accounting, crash recovery and actual entrypoint instrumentation."""
 import json, subprocess, sys, unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from test_pipeline import test_workspace
 from performance_trace import start,finish,span,events
 from performance_report import analyze
@@ -90,9 +90,10 @@ class PerformanceTrace(unittest.TestCase):
 
     def test_bootstrap_timeout_records_actual_failed_step(self):
         import bootstrap
-        with test_workspace() as w,patch('bootstrap.subprocess.run',side_effect=subprocess.TimeoutExpired(['hidden'],.01)):
+        with test_workspace() as w:
             spec=bootstrap.plan(w,runtime_dir=w/'runtime')
-            with self.assertRaises(subprocess.TimeoutExpired):bootstrap.install(spec)
+            with patch('bootstrap.subprocess.run',side_effect=subprocess.TimeoutExpired(['hidden'],.01)):
+                with self.assertRaises(subprocess.TimeoutExpired):bootstrap.install(spec)
             rows=events(w);self.assertEqual(rows[0]['category'],'setup')
             self.assertEqual(rows[-1]['status'],'failed');self.assertEqual(rows[-1]['error_type'],'TimeoutExpired')
 

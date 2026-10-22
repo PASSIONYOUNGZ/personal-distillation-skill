@@ -101,20 +101,20 @@ def person_fingerprint(data):
 def comprehension_valid(item,review):
     """Check the declared source-to-reader mapping, never assert semantic truth."""
     card=item.get('card') or {};parts=card.get('analysis_sections') or []
-    if not parts and card.get('interpretation_kind')!='brief' and card.get('reading_layer')!='viewpoint':return False
+    if not parts and card.get('reading_layer')!='viewpoint':return False
     labels={p.get('title') for p in parts} if parts else {'正文'}
     if card.get('reading_layer')=='viewpoint':labels={'观点'}
     rows=review.get('comprehension',[])
     return bool(rows) and all(isinstance(r,dict) and r.get('source_point') and r.get('evidence_locator') and r.get('reader_section') in labels for r in rows)
 
 def review_contract(request):
-    return {'version':6 if request.get('schema_version',2)>=4 else 3 if request.get('scope',{}).get('minimum_stars',1)>1 else 2}
+    from request_scope import normalize
+    normalize(request)
+    return {'version':6}
 
 def reusable_content_review(previous, contract):
-    # Contract 6 adds a background-specific record; unchanged contract-5
-    # item/unit/person checks remain usable. The new record is never invented.
-    return contract['version']<4 or previous.get('review_contract')==contract or (
-        contract['version']==6 and previous.get('review_contract')=={'version':5})
+    return previous.get('review_contract')==contract
+
 
 def background_review_valid(profile, review):
     """Require a located review of life/role coverage, not a date-span heuristic.
@@ -147,10 +147,9 @@ def validate_reading_inputs(data,request):
     if 'reading_units' in data:shaped['reading_units']=data['reading_units']
     reading_units(shaped,request.get('scope',{}).get('viewpoint_limit'))
     methods(shaped['profile'],[i['id'] for i in items])
-    if request.get('schema_version',2)>=4:
-        for item in items:
-            if item.get('reading_layer') not in ('deep','viewpoint'):raise ValueError('New research must explicitly classify deep/viewpoint reading_layer after reading')
-            if item['reading_layer']=='deep' and not item.get('analysis_sections'):raise ValueError('Deep interpretations need source-shaped explanatory sections')
+    for item in items:
+        if item.get('reading_layer') not in ('deep','viewpoint'):raise ValueError('New research must explicitly classify deep/viewpoint reading_layer after reading')
+        if item['reading_layer']=='deep' and not item.get('analysis_sections'):raise ValueError('Deep interpretations need source-shaped explanatory sections')
 
 def unit_inputs(data):
     """A changed source or grouping invalidates only its dependent reading unit."""
@@ -192,26 +191,25 @@ def accept_quality(w, spec):
     retained={r['item_id']:r for r in previous.get('items',[]) if reusable and r.get('item_id') in ids and
               previous.get('item_fingerprints',{}).get(r['item_id'])==current_hashes[r['item_id']] and checks_valid(r.get('checks'))}
     incoming=spec.get('items',[])
-    requires_comprehension=request.get('schema_version',2)>=4 or request.get('scope',{}).get('minimum_stars',1)>1
     if len(incoming)!=len({r.get('item_id') for r in incoming}) or any(r.get('item_id') not in ids for r in incoming):
         raise ValueError('Review item IDs duplicate or outside selected set')
     for r in incoming:
         if not checks_valid(r.get('checks')) or not r.get('coverage') or not r.get('remaining_gap'):
             raise ValueError('Item review needs evidence checks, actual coverage and remaining_gap (none if absent)')
-        if requires_comprehension and not comprehension_valid(data['items'][r['item_id']],r):
-            raise ValueError('Map the original main points to actual reader sections; complex works need analysis_sections, brief posts an explicit interpretation_kind=brief')
+        if not comprehension_valid(data['items'][r['item_id']],r):
+            raise ValueError('Map the original main points to actual reader sections; deep works need analysis_sections, viewpoints an explicit reading_layer=viewpoint')
         expected={m.get('material_id') or m.get('file') for m in data['items'][r['item_id']]['catalog'].get('materials',[]) if m.get('file')}
         if not expected or set(r.get('material_refs',[]))!=expected: raise ValueError('Review material_refs must name all participating original/auxiliary inputs')
         retained[r['item_id']]=r
     if set(retained)!=ids:raise ValueError('Review missing/stale items: '+','.join(sorted(ids-set(retained))))
-    if requires_comprehension and any(not comprehension_valid(data['items'][i],retained[i]) for i in ids):raise ValueError('Missing current source-to-reader comprehension review')
+    if any(not comprehension_valid(data['items'][i],retained[i]) for i in ids):raise ValueError('Missing current source-to-reader comprehension review')
     phash=person_fingerprint(data)
     claims=spec.get('person_claims')
     if not claims and reusable and previous.get('person_fingerprint')==phash:claims=previous.get('person_claims')
     if not checks_valid(claims):raise ValueError('Review supported person/learning claims separately')
     background=spec.get('background_review')
     if background is None and reusable and previous.get('person_fingerprint')==phash:background=previous.get('background_review')
-    if request.get('schema_version',2)>=4 and not background_review_valid(data.get('profile'),background):
+    if not background_review_valid(data.get('profile'),background):
         raise ValueError('Review overall public background independently of the selected works: background_review needs located coverage, sources and every timeline event (or an evidenced absence)')
     units=unit_inputs(data)
     unit_hashes={i:fingerprint(v) for i,v in units.items()}
@@ -224,9 +222,8 @@ def accept_quality(w, spec):
         if ident not in units or not unit_review_valid(units[ident],row):raise ValueError('Reading unit review needs each source mapped to actual prose and evidence checks')
         unit_reviews[ident]=row
     if set(unit_reviews)!=set(units):raise ValueError('Reading units need current evidence review: '+','.join(sorted(set(units)-set(unit_reviews))))
-    if request.get('schema_version',2)>=4:
-        methods=(data.get('profile') or {}).get('methods',[])
-        if {m['id'] for m in methods}-{c.get('method_id') for c in claims}:raise ValueError('Review each method claim with its method_id, evidence and applicability')
+    methods=(data.get('profile') or {}).get('methods',[])
+    if {m['id'] for m in methods}-{c.get('method_id') for c in claims}:raise ValueError('Review each method claim with its method_id, evidence and applicability')
     receipt={'schema_version':2,'overall_status':'reviewed','reviewed_ids':sorted(ids),'items':[retained[i] for i in sorted(ids)],
              'person_claims':claims,'input_fingerprint':fingerprint(data),'item_fingerprints':current_hashes,'person_fingerprint':phash,
              'review_contract':contract,'review_basis':'Agent read actual evidence; hash binding does not certify semantic truth.'}
@@ -244,11 +241,10 @@ def quality_status(w):
         valid=bool(rows) and len(rows)==len(current['items']) and {v.get('item_id') for v in rows}==set(current['items']) and r.get('schema_version')==2 and r.get('overall_status')=='reviewed' and checks_valid(r.get('person_claims')) and all(checks_valid(v.get('checks')) for v in r.get('items',[])) and r.get('input_fingerprint')==fingerprint(current)
         request=read(w/'request.json') if (w/'request.json').exists() else {}
         validate_reading_inputs(current,request)
-        if request.get('schema_version',2)>=4:
-            valid=valid and r.get('review_contract')==review_contract(request)
-            valid=valid and background_review_valid(current.get('profile'),r.get('background_review'))
-            valid=valid and not ({m['id'] for m in (current.get('profile') or {}).get('methods',[])}-{c.get('method_id') for c in r.get('person_claims',[])})
-        if request.get('schema_version',2)>=4 or request.get('scope',{}).get('minimum_stars',1)>1:valid=valid and all(comprehension_valid(current['items'][row['item_id']],row) for row in rows)
+        valid=valid and r.get('review_contract')==review_contract(request)
+        valid=valid and background_review_valid(current.get('profile'),r.get('background_review'))
+        valid=valid and not ({m['id'] for m in (current.get('profile') or {}).get('methods',[])}-{c.get('method_id') for c in r.get('person_claims',[])})
+        valid=valid and all(comprehension_valid(current['items'][row['item_id']],row) for row in rows)
         units=unit_inputs(current)
         unit_rows={row.get('unit_id'):row for row in r.get('unit_reviews',[])}
         valid=valid and set(units)==set(unit_rows) and all(unit_review_valid(value,unit_rows[i]) and r.get('unit_fingerprints',{}).get(i)==fingerprint(value) for i,value in units.items())

@@ -219,7 +219,7 @@ class ReadingArchitecture(unittest.TestCase):
             self.assertEqual(result['reading_units'], units)
             self.assertEqual(result['profile']['methods'], profile['methods'])
             self.assertEqual(result['items'][0]['reading_layer'], 'deep')
-            self.assertEqual(result['items'][0]['interpretation_kind'], 'structured')
+            self.assertNotIn('interpretation_kind',result['items'][0])
             config['request']['scope']['viewpoint_limit'] = 0
             distill.write(workspace/'config.json', config)
             with self.assertRaisesRegex(ValueError, 'viewpoint_limit'): build(workspace)

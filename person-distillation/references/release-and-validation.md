@@ -56,7 +56,6 @@ python <skill>/scripts/validate_reader.py --input <skill>/assets/reader.example.
 | Whisper | venv安装faster-whisper及兼容本地模型，CPU可选小模型 | 短音频有稿，首尾可核，记录配置与时间 |
 | SenseVoice | venv安装sherpa-onnx、numpy，准备模型、tokens和VAD | 16kHz单声道PCM16实际转写 |
 | 字幕CLI | 复用兼容BBDown／yt-dlp等，读本机帮助 | 样本实际取得字幕，不能只看退出码 |
-| 飞书 | 用户选择后才配置CLI和目标 | 上传、正文写入与Markdown/XML读回分别验证 |
 
 只安装需要的一条路线；缺包／模型不是平台失败。说明首次下载、体积、CPU时间和云费用，不把无转写服务费称零成本。付费、公开托管、发消息不属于普通部署隐含授权。接口会变化，安装排错查[Whisper官方实现](https://github.com/SYSTRAN/faster-whisper)、[SenseVoice Python接口](https://k2-fsa.github.io/sherpa/onnx/sense-voice/python-api.html)、[BBDown仓库](https://github.com/nilaoda/BBDown)，不保证旧命令永远有效。
 
@@ -64,7 +63,7 @@ python <skill>/scripts/validate_reader.py --input <skill>/assets/reader.example.
 
 本节仅用于开发、部署和发布验收。正常人物蒸馏不运行整套unittest、样例阅读器、独立Agent评审或多引擎比较；只做本轮平台轻探及必要单样本验证，优先把人工连接／登录集中前置。
 
-- 包只含通用规则、代码、样式、合成示例；可包含明确标注的合成占位图example-avatar.png。排除__pycache__、模型、真实账号／个人头像／人物全文、Cookie、私有空间ID、媒体签名和个人绝对路径。
+- 包只含通用规则、代码、样式、合成示例及已授权的公开项目开发者署名资源（assets/project-developer.json与其头像）。合成占位图example-avatar.png明确标注为示例。排除__pycache__、模型、研究人物原文/头像、使用者私人配置、Cookie、私有空间ID、媒体签名和个人绝对路径。
 - 入口与UI提示一致，所有相对引用可读，默认范围未确认而不是all；无个人配置也能生成阅读器。
 - 在全新临时工作目录跑request→init→集中接入/逐来源门禁→import→prepare→卡片/profile→绑定内容审阅→render→分项视觉与离线→verify；合成材料只核结构，语义另行回读材料。工具拒绝file://另测准确的未执行分支，不绕策略、不假称离线通过。
 - 测缺少人物、缺少范围、完整数量、时间、时间＋数量、全部、继续、重名和旧页面编辑。完整请求零重复范围确认，缺失信息一次补齐。
@@ -76,9 +75,10 @@ python <skill>/scripts/validate_reader.py --input <skill>/assets/reader.example.
 - 大改用独立行为测试验证普通请求；用户明确授权新对话时创建全新项目外对话，只给普通请求，不注入修复规则。在线测试可做已授权的只读轻探，遇真实登录/权限需要用户时停依赖并回收结果；不继承维护者材料或把合成结果当现场通过。未授权新对话则用隔离副本自检，不主动创建。测试至少覆盖发现Skill、初始化、接入恢复、最少交互；内容/HTML另有实际样本才验，不用单元测试数量代替。
 - 按delivery验证HTML的主题、筛选、键盘、全文与响应式；浏览器受限的项目如实记未测。
 - 有Node的维护环境可运行`node --test <skill>/scripts/test_reader_interactions.js`，验证实际reader.js在合成DOM宿主中的筛选交集、两地图同步、当前结果批量展开、键盘和配色/存储失败逻辑。它不是浏览器视觉、版式或离线验收；普通蒸馏不需要Node，也不在调用时运行这些维护测试。
+- 划词维护测试为`node --test <skill>/scripts/test_reader_annotations.js`，需开发环境另备jsdom（不进入HTML或运行依赖）；缺依赖时显示跳过。设置`READER_ANNOTATION_HTML`为实际生成HTML可补测整页启动、导出及恢复。真实鼠标／触屏选字、下载与离线重开仍在浏览器验收。
 - 交付状态回归覆盖预览passed/partial、离线passed/user_reported，以及各自的策略未执行、普通未测和真实failed。两类未执行可明示限制交文件，failed须阻止成品就绪。ready_for_final_delivery不能被解释为delivery_checks_complete，未测不伪造视口证据。
 - 核首页仅姓名/身份定位与既有入口、一段人物介绍、整体经历、地图、解读、末尾学习方向的职责。旧intro不重复显示，biography不分小标题复述履历，也不能把值得学改名充当介绍。背景不随作品窗口改变；内容简介具体有用，文章documents与语音transcripts保真；0/1/3/4/5/7个可选导航不自动复制directions。人物头像和制作头像分别验证。
-- 配置验收覆盖任务有署名、已声明用户设置但新工作区、完全无署名、另一使用者及坏路径。只用合成公开字段；不将维护者账号、头像或个人路径加入发布包。显式坏配置不得落到他人身份。
+- 署名验收覆盖新工作区、残留关闭/替换字段和不可读私人设置路径：均使用包内已授权的公开项目开发者署名，不读取私人设置，不代表安装者身份。其他真实账号、头像和个人路径不加入包。
 - 打包后保存版本、文件清单、SHA256和验收报告；运行版逐文件一致，不覆盖使用者项目配置。
 
 工作目录保留request、环境访问矩阵、来源账本、候选与selection、原稿校正、cards/profile、quality-review、输出验收、run-log、checkpoint。日志记实际动作、结果和证据文件，不记录隐藏推理或凭据；对外交付阅读成果、范围和关键缺口。

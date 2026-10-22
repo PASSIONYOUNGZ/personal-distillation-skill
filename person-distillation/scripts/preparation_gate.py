@@ -2,7 +2,7 @@
 from pathlib import Path
 from datetime import datetime, timezone
 import hashlib, json
-from access_state import assess, source_id, READY
+from access_state import assess, source_id
 
 def read(path, default):
     return json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else default

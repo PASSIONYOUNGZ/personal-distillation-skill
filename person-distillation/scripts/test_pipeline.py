@@ -1,6 +1,6 @@
 """Offline regression of scope, source protection and the complete renderer bridge."""
 from pathlib import Path
-import copy,json,os,subprocess,sys,tempfile,unittest,uuid
+import copy, json, os, tempfile, unittest, uuid
 from contextlib import contextmanager
 import distill
 from preflight import assess
@@ -26,6 +26,27 @@ def test_workspace():
     yield folder
 
 class Pipeline(unittest.TestCase):
+    def test_prepare_skips_unchanged_writes_but_refreshes_metadata_and_checks_raw_hash(self):
+        from unittest.mock import patch
+        from test_contracts import fixture
+        with test_workspace() as w:
+            fixture(w)
+            before={str(p):p.read_bytes() for p in (w/'.distill/packets').glob('*.json')}
+            before[str(w/'.distill/state.json')]=(w/'.distill/state.json').read_bytes()
+            with patch('distill.write',wraps=distill.write) as writes:
+                self.assertTrue(all(row['status']=='reused' for row in distill.prepare(w,None)))
+                writes.assert_not_called()
+            self.assertEqual(before,{name:Path(name).read_bytes() for name in before})
+            catalog=distill.read(w/'.distill/catalog.json');catalog[0]['title']='Changed source title'
+            distill.write(w/'.distill/catalog.json',catalog)
+            distill.prepare(w,catalog[0]['id'])
+            packet=distill.read(w/'.distill/packets'/(catalog[0]['id']+'.json'))
+            self.assertEqual(packet['title'],'Changed source title')
+            raw=w/packet['raw_file'];raw.write_bytes(raw.read_bytes()+b'\n ')
+            result=distill.prepare(w,catalog[0]['id'])
+            self.assertEqual(result[0]['status'],'failed')
+            self.assertIn('Cached original changed',result[0]['reason'])
+
     def test_scope(self):
         req={'person':{'seed_urls':['https://example.org/person']},'scope':{'mode':'count','count':2}}
         self.assertEqual(normalize(req)['scope']['unit'],'total')
@@ -59,7 +80,7 @@ class Pipeline(unittest.TestCase):
     def test_new_workspace(self):
         with test_workspace() as folder:
             w=Path(folder).resolve();fixture=distill.read(ROOT/'assets/reader.example.json')
-            request={'person':{'name':'林示例'},'scope':{'mode':'count','count':2}}
+            request={'person':{'name':'林示例'},'scope':{'mode':'count','count':2,'minimum_stars':1}}
             distill.init(w,'',request)
             if fixture['profile'].get('avatar'):
                 name=fixture['profile']['avatar']['path'];target=w/name;target.parent.mkdir(parents=True,exist_ok=True)
@@ -74,7 +95,7 @@ class Pipeline(unittest.TestCase):
                     distill.write(path,{'segments':segs});role='transcript'
                 else:distill.write(path,{'segments':[{'start':None,'end':None,'text':item['what']+' 合成原文独有结尾 FULL_ARTICLE_END'}]});role='article'
                 item['materials']=[{'main':True,'file':path.relative_to(w).as_posix(),'format':'segments','role':role,'platform':'示例站','url':item['sources'][0]['url'],'coverage':'合成文本完整','visual_checked':False}]
-                cards.append({'item_id':ident,'summary':item['summary'],'what':item['what'],'learning':item['learning'],'limits':item['limit'],'use':'用于合成测试','thinking':'比较修改依据','directions':'按证据复核','evidence':[{'label':'合成来源','url':item['sources'][0]['url']}],'level':'简单解析'})
+                cards.append({'item_id':ident,'summary':item['summary'],'what':item['what'],'learning':item['learning'],'limits':item['limit'],'use':'用于合成测试','thinking':'比较修改依据','directions':'按证据复核','evidence':[{'label':'合成来源','url':item['sources'][0]['url']}],'level':'简单解析','reading_layer':'deep','analysis_sections':[{'title':'正文','paragraphs':[item['what']]}]})
             incoming=w/'incoming.json';distill.write(incoming,catalog);distill.ingest(w,incoming)
             distill.write(w/'.distill/selection.json',{'items':[i['id'] for i in catalog]})
             report=distill.prepare(w,None);self.assertTrue(all(x['status']=='ready' for x in report))
@@ -108,8 +129,10 @@ class Pipeline(unittest.TestCase):
             self.assertFalse(distill.verify(w)['ready_for_final_delivery'])
             from evidence_review import accept_quality,accept_visual
             accept_quality(w,{'items':[{'item_id':i['id'],'material_refs':[m['file'] for m in i['materials']],
+                'comprehension':[{'source_point':'Synthetic content','evidence_locator':i['materials'][0]['file'],'reader_section':'正文'}],
                 'coverage':'synthetic full text','remaining_gap':'synthetic visual gap retained',
                 'checks':[{'claim':'Synthetic understanding only','status':'qualified','evidence_locator':i['materials'][0]['file']}]} for i in catalog],
+                'background_review':__import__('test_contracts').synthetic_background(),
                 'person_claims':[{'claim':'Synthetic fixture only','status':'qualified','evidence_locator':'notes/portrait.md'}]})
             accept_visual(w,{'html_sha256':distill.sha(w/'output/人物蒸馏.html'),'tool':'synthetic fixture; not browser',
                 'offline_file_verified':True,'viewports':[{'width':1305,'evidence':'synthetic receipt'}],'interactions':['synthetic state']})
@@ -117,7 +140,8 @@ class Pipeline(unittest.TestCase):
             generated=distill.read(w/'output/reader-data.json')
             self.assertEqual(len(generated['items'][1]['transcripts']),2)
             self.assertEqual(generated['items'][0]['kind'],'article')
-            self.assertIn('FULL_ARTICLE_END',(w/'output/人物蒸馏.html').read_text(encoding='utf-8'))
+            self.assertIn('FULL_ARTICLE_END',json.dumps(generated['items'][0]['documents']))
+            self.assertNotIn('FULL_ARTICLE_END',(w/'output/人物蒸馏.html').read_text(encoding='utf-8'))
             self.assertIn('API v2',(w/'output/人物蒸馏.html').read_text(encoding='utf-8'))
             self.assertIn('API v3',(w/'output/人物蒸馏.html').read_text(encoding='utf-8'))
             page=w/'output/人物蒸馏.html';page.write_text(page.read_text(encoding='utf-8')+'<!-- user edit -->',encoding='utf-8')

@@ -2,7 +2,7 @@
 
 # Personal Distillation Skill
 
-当前版本 **2026.10.21.1** · [下载 Skill ZIP](dist/person-distillation-2026.10.21.1.zip) · [更新说明](CHANGELOG.md)
+当前版本 **2026.10.22.3** · [下载 Skill ZIP](dist/person-distillation-2026.10.22.3.zip) · [更新说明](CHANGELOG.md)
 
 **Learn from people. Build your own practice.**
 
@@ -33,22 +33,30 @@ An agent skill for learning from a person's public work: research their backgrou
 - **做事逻辑与方法**：跨作品梳理判断、行动与反馈，每条方法可追溯来源和适用条件。
 - **原文与证据**：保留来源链接、完整原文、图片和视频字幕；原稿、证据校正与待核项分别记录。
 - **可选学习方向**：从本轮内容出发，给出可以迁移到自己实践中的方向。
-- **独立阅读文件**：内嵌 CSS、JavaScript 与可用图片的单文件 HTML，支持配色、展开与阅读导航。
+- **独立阅读文件**：内嵌 CSS、JavaScript 与可用图片的单文件 HTML，支持配色、展开、划词高亮与带高亮导出。
 
-## 按你的偏好使用
+## 按你的需要使用
 
 主线是：**他是谁 → 做过什么、表达过什么 → 如何判断和做事 → 我能怎样借鉴。**
 
-```text
-使用 $person-distillation，蒸馏某人的30项代表性公开内容。
-使用 $person-distillation，蒸馏某人最近30项公开内容。
-使用 $person-distillation，蒸馏某人最近三个月的内容，偏重长文和项目。
-使用 $person-distillation，研究某人的5个产品案例。
-使用 $person-distillation，整理某人最近20项有价值的短帖，相近观点合并。
-使用 $person-distillation，研究某人的10条代表视频。
-```
+把下面的姓名、主页和路径换成实际对象即可；这些是可选用法，不是安装问卷。
 
-代表性学习可兼顾实践与观点；明确“最近N项”仍按时间选合格作品，不因偏好换成较早作品。作品数和聚合观点数分开，10—20条观点是阅读参考，不是固定配额。视频可能需要字幕、音轨和关键画面处理，耗时随材料及环境变化。更多例子见[使用示例](person-distillation/references/usage-examples.md)。
+| 情况 | 请求示例 |
+| --- | --- |
+| 看近期更新 | 使用 $person-distillation，蒸馏[姓名或主页]最近30项公开内容。 |
+| 研究指定时间 | 使用 $person-distillation，蒸馏[姓名或主页]在2026年9月发布的公开内容。 |
+| 从代表作品理解能力 | 使用 $person-distillation，蒸馏[姓名或主页]的30项代表性公开内容，兼顾实践和观点。 |
+| 限定平台或形式 | 使用 $person-distillation，只研究[姓名或主页]在B站最近20条有学习价值的视频。 |
+| 只整理已有材料 | 使用 $person-distillation，只整理[材料文件夹]里的[姓名]作品与人物背景，生成阅读版。 |
+| 接续已有研究 | 使用 $person-distillation，继续[旧任务目录]，补充[姓名]在2026年10月的新内容。 |
+| 优化已有阅读版 | 使用 $person-distillation，优化[HTML或任务目录]的阅读体验，调整[具体问题]，保留现有内容和我的修改。 |
+| 审校视频逐字稿 | 使用 $person-distillation，审校[视频链接或文件]的逐字稿[稿件路径]，保留原稿，另存有依据的纠错稿和待核词。 |
+
+“最近N项”按合格作品时间向前补足；代表集合按预算选样，不能称严格最近集合。时间与数量同时限定时取交集。作品数与聚合观点数分开，不硬凑观点配额。视频按材料需要处理字幕、音轨和关键画面。
+
+当前请求统一使用schema4、质量审阅合同6。同合同未变材料和审阅可以复用；旧格式任务保留原稿及用户修改，在独立目录按当前要求重建，不沿用旧审阅通过状态。接续不自动拼接多个HTML或后台监控。
+
+完整情境与偏好说明见[八种使用示例](person-distillation/references/usage-examples.md)。
 
 ## 它如何研究
 

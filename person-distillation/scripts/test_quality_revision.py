@@ -32,10 +32,11 @@ class QualityRevision(unittest.TestCase):
         from content_screening import workspace_audit
         with test_workspace() as w:
             request,items,cards=fixture(w)
-            request['schema_version']=3;request['scope'].update(mode='count',count=2)
+            request['scope'].update(mode='count',count=2,minimum_stars=3,order='latest')
             request=normalize(request);self.assertEqual(request['scope']['minimum_stars'],3)
             distill.write(w/'request.json',request);config=distill.read(w/'config.json');config['request']=request;distill.write(w/'config.json',config)
             spec=quality_spec(items)
+            for row in spec['items']:row.pop('comprehension',None)
             with self.assertRaisesRegex(ValueError,'main points'):accept_quality(w,spec)
             for card,row in zip(cards,spec['items']):
                 card.update(recommendation_stars=4,score_reason='Concrete synthetic example',analysis_sections=[{'title':'A specific source example','paragraphs':[card['what']]}])

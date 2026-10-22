@@ -1,7 +1,6 @@
 """Regression for the real reader/data failures; all identities are synthetic."""
 from contextlib import redirect_stdout
 from io import StringIO
-from pathlib import Path
 from unittest.mock import patch
 import copy, json, unittest
 import acquisition, distill
@@ -10,57 +9,13 @@ from evidence_review import accept_quality, accept_visual, offline_status, quali
 from render_reader import render
 from test_contracts import fixture, quality_spec
 from test_pipeline import test_workspace
-from user_settings import import_creator
 from validate_reader import validate, inspect_html
 
 
 class ReaderContracts(unittest.TestCase):
-    def test_declared_creator_priority_and_reusable_snapshot(self):
-        with test_workspace() as w:
-            for name in ('task','project','user'):
-                folder=w/name;folder.mkdir();(folder/'avatar.png').write_bytes(b'synthetic image '+name.encode())
-                distill.write(folder/'author.json',{'name':name,'role':'整理者','avatar':{'path':'avatar.png'},'links':[], 'cookie':'MUST_NOT_COPY'})
-                distill.write(folder/'settings.json',{'creator_file':'author.json'})
-            with patch.dict('os.environ',{'PERSON_DISTILLATION_SETTINGS':str(w/'user/settings.json')}):
-                config={'creator_file':'task/author.json','project_settings_file':'project/settings.json'}
-                author,origin,warnings=import_creator(w,config)
-                self.assertEqual(author['name'],'task');self.assertEqual(origin['source'],'task');self.assertFalse(warnings)
-                self.assertTrue((w/author['avatar']['path']).is_file());self.assertNotIn('cookie',author)
-                again,_,warnings=import_creator(w,{'creator_file':origin['snapshot_file']})
-                self.assertEqual(again['name'],'task');self.assertFalse(warnings)
-                author,origin,_=import_creator(w,{'project_settings_file':'project/settings.json'})
-                self.assertEqual(author['name'],'project')
-                author,origin,_=import_creator(w,{})
-                self.assertEqual(author['name'],'user')
-                author,origin,_=import_creator(w,{'creator_enabled':False})
-                self.assertIsNone(author)
 
-    def test_broken_explicit_identity_never_falls_through_to_another_user(self):
-        with test_workspace() as w:
-            distill.write(w/'other.json',{'name':'Other user'})
-            distill.write(w/'settings.json',{'creator_file':'other.json'})
-            with patch.dict('os.environ',{'PERSON_DISTILLATION_SETTINGS':str(w/'settings.json')}):
-                author,origin,warnings=import_creator(w,{'creator_file':'missing.json'})
-                self.assertIsNone(author);self.assertEqual(origin['source'],'task');self.assertTrue(warnings)
-            distill.write(w/'partial.json',{'name':'Correct user','avatar':{'path':'missing.png'},'links':[{'label':'Site','url':'https://example.org/'}]})
-            author,origin,warnings=import_creator(w,{'creator_file':'partial.json'})
-            self.assertEqual(author['name'],'Correct user');self.assertNotIn('avatar',author)
-            self.assertEqual(len(author['links']),1);self.assertTrue(warnings)
 
-    def test_fresh_user_has_no_maintainer_configuration(self):
-        with test_workspace() as w:
-            with patch.dict('os.environ',{'CODEX_HOME':str(w/'fresh-home'),'PERSON_DISTILLATION_SETTINGS':''}):
-                creator,origin,warnings=import_creator(w,{})
-                self.assertIsNone(creator);self.assertEqual(origin['source'],'none');self.assertFalse(warnings)
 
-    def test_malformed_user_settings_and_creator_are_reported(self):
-        with test_workspace() as w:
-            distill.write(w/'settings.json',[])
-            with patch.dict('os.environ',{'PERSON_DISTILLATION_SETTINGS':str(w/'settings.json')}):
-                creator,origin,warnings=import_creator(w,{})
-                self.assertIsNone(creator);self.assertTrue(warnings)
-            fixture(w);data=build(w);data['creator']={'name':123}
-            self.assertTrue(validate(data,w/'output'))
 
     def test_build_preserves_documents_and_uses_reviewed_summary_in_both_maps(self):
         with test_workspace() as w:
@@ -68,6 +23,7 @@ class ReaderContracts(unittest.TestCase):
             catalog=distill.read(w/'.distill/catalog.json')
             document={'title':'已有结构稿','note':'合成附录','document':{'format':'text','text':'PRESERVED_DOCUMENT_BODY'}}
             catalog[0]['documents']=[document];distill.write(w/'.distill/catalog.json',catalog)
+            cards[0]['reading_layer']='viewpoint'
             cards[0]['summary']='REVIEWED_SUMMARY describes a concrete feature and what the author compared.'
             distill.write(w/'.distill/cards.json',cards)
             distill.render(w)
@@ -100,7 +56,7 @@ class ReaderContracts(unittest.TestCase):
             imported=distill.read(w/'.distill/catalog.json')
             self.assertEqual(imported[0]['documents'],[document])
             self.assertEqual(imported[1]['transcripts'],[transcript])
-            distill.prepare(w,None);data=build(w)
+            distill.prepare(w,None);cards=distill.read(w/'.distill/cards.json');cards[0]['reading_layer']='viewpoint';distill.write(w/'.distill/cards.json',cards);data=build(w)
             self.assertEqual(data['items'][0]['documents'],[document])
             self.assertEqual(data['items'][0]['transcripts'],[])
             self.assertEqual(data['items'][1]['documents'],[])
@@ -122,6 +78,7 @@ class ReaderContracts(unittest.TestCase):
             _,_,cards=fixture(w)
             fields=('summary','what','use','workflow','thinking','limits','directions','score_reason','result')
             for field in fields:cards[0][field]=[field.upper()+'_PART_ONE',field.upper()+'_PART_TWO']
+            cards[0]['analysis_sections']=[{'title':'正文','paragraphs':cards[0]['what']}]
             cards[0]['learning']=[]  # Use the workflow list as individual learning entries.
             source=w/'.distill/cards.json';distill.write(source,cards);before=source.read_bytes()
             written=distill.render(w);self.assertEqual(written['人物蒸馏.html'],'written')

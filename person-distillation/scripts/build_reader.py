@@ -48,7 +48,7 @@ def reader_materials(item):
 
 def build(w):
     # Import late to share transcript parsing without importing the CLI entry point.
-    from distill import local,segments,sha,stamp
+    from distill import local, segments, stamp
     w=Path(w).resolve();d=w/'.distill';config=required(w/'config.json')
     if not config.get('scope',{}).get('user_confirmed'):raise ValueError('Person/scope must be specified before rendering')
     catalog=required(d/'catalog.json');cards=required(d/'cards.json');profile=required(d/'profile.json')
@@ -80,7 +80,7 @@ def build(w):
     output=[]
     for ident in chosen:
         item=copy.deepcopy(by_id[ident]);card=normalize_card(by_card[ident])
-        for k in ('summary','highlights','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage','reading_layer','interpretation_kind'):
+        for k in ('summary','highlights','what','analysis_sections','use','workflow','thinking','directions','evidence','level','coverage','reading_layer'):
             if k in card:item[k]=copy.deepcopy(card[k])
         item.setdefault('summary','');item.setdefault('what','')
         item['learning']=card.get('learning') or ([card['workflow']] if card.get('workflow') else [])
@@ -137,10 +137,4 @@ def build(w):
     methods(result['profile'],[item['id'] for item in output])
     if profile.get('hero_image'):result['profile']['hero_image']=picture(profile['hero_image'])
     if profile.get('avatar'):result['profile']['avatar']=picture(profile['avatar'])
-    from user_settings import import_creator
-    creator,provenance,warnings=import_creator(w,config)
-    result['build_metadata']={'creator_source':provenance,'warnings':warnings}
-    if creator:
-        if creator.get('avatar'):creator['avatar']=picture(creator['avatar'])
-        result['creator']=creator
     return result

@@ -41,7 +41,9 @@ Use a Python version compatible with the selected package wheels; running core s
 - Host discovery status and whether browser/network access is available.
 - Any exact remaining user action or failed dependency; distinguish base deployment from source access.
 
-Once installed, normal use only needs a person and quantity/time scope. Example: `使用 $person-distillation，蒸馏某位创作者最近30项公开内容。`
+Once installed, normal use only needs a person and a scope. Present the eight usage scenarios in README.md and link the installed references/usage-examples.md; briefly distinguish recent works, time ranges, representative works, platform/type limits, provided materials, continuation, reader improvements and transcript review. These are optional choices, not an installation questionnaire.
+
+Use current request schema4 and review contract6. Preserve old task artifacts; reuse their verified materials in a current workspace rather than carrying over obsolete passing reviews. Public project developer attribution is bundled and retained; no private author settings are required or read.
 
 ## Research timing (after deployment)
 

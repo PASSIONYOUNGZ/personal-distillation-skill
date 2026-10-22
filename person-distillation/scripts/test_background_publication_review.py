@@ -2,10 +2,8 @@
 import copy, unittest
 from unittest.mock import patch
 from test_pipeline import test_workspace
-from test_contracts import fixture, quality_spec
-from distill import read, write
-from evidence_review import accept_quality, quality_status, background_review_valid
-from record_templates import draft as quality_draft
+from distill import write
+from evidence_review import background_review_valid
 from publication_review import differences, valid_review, accept, status
 
 
@@ -51,25 +49,6 @@ class BackgroundAndPublicationReview(unittest.TestCase):
         reviewed['absence_checks']=[]
         self.assertFalse(background_review_valid(profile,reviewed))
 
-    def test_contract_five_migration_only_adds_missing_background(self):
-        with test_workspace() as w:
-            _,items,cards=fixture(w);spec=quality_spec(items)
-            request=read(w/'request.json');request['schema_version']=4;write(w/'request.json',request)
-            for card,review in zip(cards,spec['items']):
-                card['reading_layer']='viewpoint';review['comprehension']=[{'source_point':'A synthetic source judgment.',
-                    'evidence_locator':review['material_refs'][0],'reader_section':'观点'}]
-            write(w/'.distill/cards.json',cards)
-            spec['background_review']=background(read(w/'.distill/profile.json'));accept_quality(w,spec)
-            receipt=read(w/'.distill/quality-review.json');receipt['review_contract']={'version':5};receipt.pop('background_review')
-            write(w/'.distill/quality-review.json',receipt);before=(w/'.distill/cards.json').read_bytes()
-            self.assertFalse(quality_status(w)[0]);draft=quality_draft(w,'quality',True)
-            self.assertEqual(draft['items'],[]);self.assertIn('background_review',draft)
-            self.assertEqual(draft['background_review']['sources'],[])
-            before_receipt=(w/'.distill/quality-review.json').read_bytes()
-            with self.assertRaisesRegex(ValueError,'background_review'):accept_quality(w,{'items':[]})
-            self.assertEqual(before_receipt,(w/'.distill/quality-review.json').read_bytes())
-            accept_quality(w,{'items':[],'background_review':spec['background_review']})
-            self.assertTrue(quality_status(w)[0]);self.assertEqual(before,(w/'.distill/cards.json').read_bytes())
 
     def test_fixed_length_half_sentence_cannot_claim_full_or_use_label_as_review(self):
         expected=source('Rust is useful, but a long build makes feedback slow. Keep only the Rust core.')

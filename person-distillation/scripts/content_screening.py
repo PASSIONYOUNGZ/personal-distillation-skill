@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,json
 from datetime import datetime
-from request_scope import normalize, normalize_kind, kind_decision, sort_date, ordering_value
+from request_scope import normalize, normalize_kind, kind_decision, ordering_value
 
 
 def _scope_relevance(scope, item):
@@ -122,7 +122,6 @@ def workspace_audit(workspace):
     record=d/'screening.json'
     has_kind_filter=bool(request['scope'].get('content_preferences',{}).get('only_kinds'))
     if minimum==1 and not record.exists() and not has_kind_filter:return {'passed':True,'status':'filter_explicitly_disabled','errors':[]}
-    if minimum is None and not record.exists():return {'passed':True,'status':'legacy_no_filter_requested','errors':[]}
     if not record.exists() and minimum!=1:return {'passed':False,'errors':['Missing .distill/screening.json']}
     catalog=read(d/'catalog.json');selection_data=read(d/'selection.json');selection=set(selection_data.get('items',[]));scope=request['scope']
     records=read(record) if record.exists() else []
@@ -153,7 +152,7 @@ def workspace_audit(workspace):
             result['errors'].append('Selected item outside only_kinds: '+item['id'])
         if relevant and (minimum or 3)>1 and (item['id'] not in rows or rows[item['id']].get('decision')=='pending'):
             result['errors'].append('Candidate frontier still has unassessed work: '+item['id'])
-        if request['schema_version']>=4 and relevant and scope['order']=='latest' and item['id'] not in selection and rows.get(item['id'],{}).get('decision')=='keep':
+        if relevant and scope['order']=='latest' and item['id'] not in selection and rows.get(item['id'],{}).get('decision')=='keep':
             newer = scope['mode'] in ('time','all') or (frontier and day>frontier)
             if scope.get('unit')=='per_platform':
                 newer=any(platform_frontiers.get(s.get('platform')) and day>platform_frontiers[s['platform']] for s in item.get('sources',[]))

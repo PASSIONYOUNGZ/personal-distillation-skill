@@ -6,7 +6,7 @@
 
 ## 文件接口
 
-- config.json保存人物、范围、输出和工具；creator_file显式引用可选署名JSON，构建时导入本任务快照及头像。没有私有署名配置就用包内已授权的项目开发者公开署名，不额外问卷。
+- config.json保存人物、范围、输出和工具。项目品牌固定读取随包公开开发者资料，不读取私人署名设置，也不提出署名问卷。
 - .distill/catalog.json为候选目录；selection.json的items为入选ID数组。发现不等于加入交付。
 - .distill/cards.json是每个入选项的审阅卡片：item_id/summary/what/use/workflow/thinking/limits/directions/evidence/level，补learning字符串数组。正文文本可用字符串或有序字符串段落数组，由统一适配转为规范字符串；learning始终转为字符串数组，详见[data-and-batch](data-and-batch.md)。此兼容只在底稿构建时处理，直接reader-data仍用下面的规范字段。
 - .distill/profile.json为下面的profile对象。biography承载整体人物背景，引用选集外来源也可以；items引用有效作品ID。directions是末尾学习建议，不生成前置“值得学”或默认关系树。数量取决于证据，不凑四特点或五经历。
@@ -14,7 +14,7 @@
 
 ## 阅读器字段
 
-顶层profile/items，可选creator与reading_units。output/reader-data.json图片路径相对该文件，不依赖原作者电脑。
+顶层profile/items，可选reading_units。output/reader-data.json图片路径相对该文件，不依赖原作者电脑。
 
 ## 来源作品、阅读单元与方法
 
@@ -30,7 +30,7 @@
 
 id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/summary非空。deep的paragraphs和analysis_sections至少一个有实际解释，新任务用analysis_sections；viewpoint的summary就是完整可读观点，通常一两句，必要背景/归属自然写在其中，不要求另写分析。context/attribution/paragraphs/analysis_sections旧字段仍保留数据，但观点阅读区不再展开这些分析。显式单元正文另做语义审阅与来源要点映射，不能凭通过结构校验就称内容质量足够。旧数据没有units和reading_layer时原样走旧“内容解读”路径；一旦选择逐项reading_layer适配，所有已选作品都须明确分层。显式units为权威阅读组织，仍保留item中的原始字段与扩展审阅信息。
 
-显式单元展示顺序为“深度内容解读→精选观点”。深读使用带日期、五星与统一右侧控件的可展开卡片；单来源沿用其评星，多来源可填recommendation_stars与score_reason，未审总评则星级逐来源显示，不算平均分；推荐理由始终只有一条，优先单元score_reason，旧聚合才去重合并已有成员理由。深读顶部用“内容来源：平台”列真实原链，正文不重复嵌套来源解读或文章摘录；补充证据链接和语音稿仍保留。观点按内容地图的统一主题顺序分组，组内保持原顺序，常显只有summary与“查看原文”控件。展开仅显示items.documents里的准确原文及来源；保留文件中旧分析但不混入原文。documents条目沿用title/note/document，可加author和source_url说明原作者与对应原链；主帖、续帖与引用分别标明。没有原文的旧数据只显示原链，不能把what当原文；新任务取得短帖正文时同时保存用于展示的documents，不默认设source_link_only。逐字稿兼容transcripts。原有`#note-作品ID`锚点仍可打开对应单元；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
+显式单元展示顺序为“深度内容解读→精选观点”。深读使用带日期、五星与统一右侧控件的可展开卡片；单来源沿用其评星，多来源可填recommendation_stars与score_reason，未审总评则星级逐来源显示，不算平均分；推荐理由始终只有一条，优先单元score_reason，旧聚合才去重合并已有成员理由。深读顶部用“内容来源：平台”列真实原链，正文不重复嵌套来源解读或文章摘录；补充证据链接和语音稿仍保留。观点按内容地图的统一主题顺序分组，组内保持原顺序，常显summary；有原文时右侧用“查看原文”控件，无原文则直接显示“内容来源：平台”链接，不留空展开框。展开仅显示items.documents里的准确原文及来源，短帖优先完整展示，长文节选保留主要论述及必要上下文（选择原则见[写作与证据](writing-and-evidence.md)）；保留文件中旧分析但不混入原文。documents条目沿用title/note/document，可加author和source_url说明原作者与对应原链；主帖、续帖与引用分别标明。没有原文的旧数据只显示原链，不能把what当原文；新任务取得短帖正文时同时保存用于展示的documents，不默认设source_link_only。逐字稿兼容transcripts。原有`#note-作品ID`锚点仍可打开对应单元；新单元另有`#unit-单元ID`。原稿仅排版和有证据校正，不随单元文案润色。
 
 主题、精确星级、关键词与阅读层筛选取交集，以来源作品为基准；任一来源命中时展示所属聚合单元，保留单元的完整上下文。地图计数明确为“项作品”，不把命中的作品数说成观点数。作品主题和单元主题可不同，筛选仍按地图对应的作品主题执行。`scope.viewpoint_limit`在构建时按实际viewpoint单元数量校验，超限必须人工组织/调整，不自动截掉来源作品。
 
@@ -72,15 +72,13 @@ documents为文章原文版本数组，type=document，document.format为text/ma
 
 coverage可用字符串或{label,detail}，给读者有效边界，如“画面解析 · 语音待核”。它来自材料实际覆盖，不由kind=video或存在音轨推断；长诊断仍留内部。第一批正常材料就保存原文结构并核到页面的字段映射，后续增量沿同一入口，不临交付补档或额外做登录前演练。
 
-creator可选：name/role/avatar（path）/links（label/url）。未指定role用“项目制作”；仅明确实际身份才写“项目开发者”，不把使用者冒称Skill开发者。个人图片和配置不进入发布包。
 
-默认品牌署名另由包内assets/project-developer.json及其公开头像提供，已经获得项目开发者的分发授权；它是项目公开署名，不是当前使用者配置/登录。未声明creator时仍显示项目开发者与主页；显式creator继续按实际角色处理。该公开署名是私有配置不入包原则的明确例外，不准顺带打包其他账号、配置或人物材料。
+默认品牌署名另由包内assets/project-developer.json及其公开头像提供，已经获得项目开发者的分发授权；它是项目公开署名，不是当前使用者配置/登录。固定显示项目开发者、头像和主页，不提供关闭或替换配置。该公开署名是私有配置不入包原则的明确例外，不准顺带打包其他账号、配置或人物材料。
 
 items.analysis_sections为[{title,paragraphs:[...]}]，复杂作品用于呈现主要内容，what保留兼容与检索摘要；构建、Markdown、HTML与来源审阅使用同一组段落。小节可选images数组，每图含path、caption、url或source_url，沿用普通图片合同，在对应小节之后显示并支持放大；reading_units的analysis_sections同样支持。只放实际查看且有解释作用的原作图，视频图注注明时间及该画面说明什么，不把选图数作为质量指标。路径在底稿中相对任务根目录，reader-data中相对数据文件。不要把完整字幕拿到后仍仅写what几句。level/limit保留底稿，不常显“简单解析”或“阅读时留意”；重要限制自然限定相应正文。coverage只在入口处简短出现一次，不在卡片展开正文再重复；原作链接保留一组，证据相同不重复列“依据”。
 
 biography条目可选note，显示在人物正文下方的小字中；适合确有必要但不属于人物介绍主句的取材说明。不填写时保持既有介绍布局，不自动生成免责声明，也不把决定事实含义的限定挪离正文。
 
-配置读取顺序：任务config.creator_file→config.project_settings_file指定的设置文件→PERSON_DISTILLATION_SETTINGS指定设置文件→宿主CODEX_HOME下person-distillation/settings.json（缺省为~/.codex下同路径）→通用品牌。设置文件格式为{"creator_file":"配置路径"}，相对路径以设置文件目录为基准；任务config.creator_enabled=false可关闭。只读声明位置，不扫描整机或猜账号。显式坏配置报告警告，不偷偷退用别人的身份。构建将公开字段与头像复制到任务.distill/user并记录build_metadata来源；头像失效时保留ID/链接并报缺项。新用户没有设置也能完整生成，不能要求首次调用填写制作资料。
 
 ```text
 python <skill>/scripts/distill.py render --workspace <workspace>

@@ -302,13 +302,14 @@ class ReaderLayout(unittest.TestCase):
             subject_img = self.one(hero, tag='img', cls='subject-avatar')
             creator_img = self.one(creator, tag='img', cls='brand-avatar')
             self.assertNotEqual(subject_img.attrs['src'], creator_img.attrs['src'])
-            self.assertEqual(base64.b64decode(creator_img.attrs['src'].split(',', 1)[1]), author_bytes)
+            self.assertEqual(base64.b64decode(creator_img.attrs['src'].split(',', 1)[1]), (ROOT/'assets/project-developer-avatar.jpg').read_bytes())
             self.assertEqual(self.one(hero, cls='subject-avatar-link').attrs['href'], subject['source_url'])
             self.assertNotIn('Synthetic Creator', hero.text())
-            self.assertIn('Synthetic Creator', creator.text())
+            self.assertNotIn('Synthetic Creator', creator.text())
+            self.assertIn('PassionYoungz',creator.text())
             self.assertNotIn(self.data['profile']['name'], creator.text())
             self.assertEqual([a.attrs['href'] for a in self.one(creator, cls='creator-links').descendants(tag='a')],
-                             ['https://example.org/creator'])
+                             [a['url'] for a in __import__('render_reader').PROJECT_DEVELOPER['links']])
 
     def test_unknown_event_date_does_not_fall_back_to_legacy_or_publication_date(self):
         self.data['profile']['timeline'] = [

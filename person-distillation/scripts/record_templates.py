@@ -24,7 +24,7 @@ def draft(workspace,kind,changed_only=False):
     result={'items':rows}
     if not changed_only or not reusable or previous.get('person_fingerprint')!=person_fingerprint(data):
         result['person_claims']=[]
-    if request.get('schema_version',2)>=4 and (not changed_only or not previous.get('background_review') or
+    if (not changed_only or not previous.get('background_review') or
             not reusable or previous.get('person_fingerprint')!=person_fingerprint(data)):
         profile=data.get('profile') or {}
         result['background_review']={'coverage':'','sources':[],

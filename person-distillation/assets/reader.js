@@ -128,7 +128,7 @@ const modal=document.querySelector('#image-dialog');let lastImage=null;document.
 // Content stays visible while scrolling. Adding a fade-in only after the
 // intersection callback made an already painted heading suddenly dim and move.
 const nav=document.querySelectorAll('.rail nav a');if('IntersectionObserver'in window){const observer=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)nav.forEach(a=>{const yes=a.hash==='#'+e.target.id;a.classList.toggle('active',yes);if(yes)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');});});},{rootMargin:'-8% 0px -74% 0px'});document.querySelectorAll('section[id]').forEach(s=>observer.observe(s));}
-const backtop=document.querySelector('.backtop');function updateBacktop(){backtop.hidden=window.scrollY<500;}window.addEventListener('scroll',updateBacktop,{passive:true});updateBacktop();filter();
+filter();
 
 // Prefer complete sentences on separate lines when the existing line count is preserved.
 // This changes line breaks, never source words; transcripts and linked prose are excluded.
@@ -141,6 +141,7 @@ function lineMap(el){
 }
 function putBreaks(el,text,breaks){const fragment=document.createDocumentFragment();let start=0;for(const at of breaks){fragment.append(text.slice(start,at));const br=document.createElement('br');br.dataset.readingBreak='';fragment.append(br);start=at;}fragment.append(text.slice(start));el.replaceChildren(fragment);}
 function improveFlow(el,force=false){
+ if(el.querySelector('mark[data-reader-mark]'))return;
  if(el.closest('[hidden]'))return;
  const closed=el.closest('details');if(closed&&!closed.open&&!el.closest('summary'))return;
  const width=el.getBoundingClientRect().width;if(width<180)return;

@@ -1,19 +1,6 @@
 """Remember access capability and tool locations; never logs in or reads cookies."""
 from pathlib import Path
-import argparse,hashlib,importlib.util,json,os,shutil,subprocess,sys,time
-from urllib.parse import urlparse
-
-def x_browser_policy(channel):
-    host=(urlparse(channel.get('url') or '').hostname or '').lower()
-    names={str(channel.get(k,'')).strip().lower() for k in ('name','platform')}
-    is_x=bool(names & {'x','twitter'}) or any(host==d or host.endswith('.'+d) for d in ('x.com','twitter.com'))
-    if not is_x:return None
-    browser=str(channel.get('browser') or '').strip()
-    internal=browser.lower() in ('iab','mcpapps','codex','internal','in-app','in-app browser') or browser.lower().startswith('codex') or '内置' in browser
-    selected=bool(browser) and not internal and (channel.get('browser_scope')=='external' or browser.lower() in ('chrome','edge','firefox','safari'))
-    return {'required_browser_scope':'external','internal_login_allowed':False,'browser':browser or None,
-            'external_connection_verified':bool(selected and channel.get('browser_connected') is True and channel.get('browser_evidence'))}
-
+import argparse, hashlib, json, os, shutil, subprocess, sys, time
 def environment(config, workspace):
     """Only named configuration files; never recursively scan other chats/home."""
     registry=Path(os.environ.get('CODEX_HOME') or Path.home()/'.codex')/'person-distillation/environment.json'
@@ -50,7 +37,7 @@ def resolve(value):
     path=Path(first).expanduser()
     return str(path.resolve()) if path.is_file() else shutil.which(first)
 def tools(config,dirs):
-    names={'ffmpeg':['ffmpeg','ffmpeg.exe'],'bbdown':['BBDown','BBDown.exe'],'yt_dlp':['yt-dlp','yt-dlp.exe'],'feishu':['lark-cli','lark-cli.cmd']}
+    names={'ffmpeg':['ffmpeg','ffmpeg.exe'],'bbdown':['BBDown','BBDown.exe'],'yt_dlp':['yt-dlp','yt-dlp.exe']}
     result={};patch={}
     for key,candidates in names.items():
         configured=config.get('tools',{}).get(key)

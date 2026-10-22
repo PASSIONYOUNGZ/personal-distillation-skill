@@ -7,7 +7,7 @@ punctuation heuristic.
 """
 from pathlib import Path
 from html.parser import HTMLParser
-import argparse, json, re
+import argparse, json
 from evidence_review import read, fingerprint, checks_valid, local
 
 
@@ -18,18 +18,26 @@ def originals(item):
 class PlainText(HTMLParser):
     def __init__(self):super().__init__();self.parts=[]
     def handle_data(self,value):self.parts.append(value)
+    def handle_endtag(self,tag):
+        # Keep block/cell boundaries; adjacent paragraphs are not one word.
+        if tag in ('p','blockquote','li','tr','h2','h3','h4','h5','h6'):self.parts.append('\n')
+        elif tag in ('td','th'):self.parts.append('\t')
 
 
 def texts(value):
-    """Comparable source text, preserving order and ignoring layout whitespace."""
+    """Compare readable text with meaningful whitespace and block boundaries.
+
+    Only CRLF/CR line endings are canonicalized. Spaces inside words, strings
+    and code indentation must never disappear to make a changed quote pass.
+    """
     from document_render import render_document
     result=[]
     for field in ('documents','transcripts'):
         for entry in value.get(field,[]):
             if field=='documents' or entry.get('type')=='document':
                 parser=PlainText();parser.feed(render_document(entry['document']));text=''.join(parser.parts)
-            else:text=''.join(p['text'] for p in entry.get('paragraphs',[]))
-            result.append(re.sub(r'\s+','',text))
+            else:text='\n\n'.join(p['text'] for p in entry.get('paragraphs',[]))
+            result.append(text.replace('\r\n','\n').replace('\r','\n'))
     return result
 
 
@@ -44,7 +52,7 @@ def valid_review(value,row):
     if not isinstance(row,dict) or not checks_valid(row.get('checks')):return False
     if not isinstance(row.get('reason'),str) or not row['reason'].strip():return False
     source=texts(value['source']);published=texts(value['published']);mode=row.get('mode')
-    if mode=='full':return bool(source) and published==source
+    if mode=='full':return bool(source) and all(text.strip() for text in source) and published==source
     if mode=='link_only':return not published
     if mode!='excerpt' or not published or not all(text and any(text in original for original in source) for text in published):return False
     # Exact substrings prove quotation fidelity only. A reviewer must explain
