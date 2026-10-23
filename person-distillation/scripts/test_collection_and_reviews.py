@@ -149,7 +149,7 @@ class CollectionAndReviews(unittest.TestCase):
                 'evidence':[{'item_id':items[0]['id'],'kind':'inference','locator':'First paragraph','note':'This example supports the mechanism.'}]}]
             write(w/'.distill/profile.json',p);config=read(w/'config.json');config['output']['formats']=['md'];write(w/'config.json',config)
             distill.render(w);body=(w/'output/人物蒸馏.md').read_text(encoding='utf-8')
-            self.assertIn('## 精选观点',body);self.assertIn('Concrete mechanism',body);self.assertIn('This example supports the mechanism.',body)
+            self.assertIn('## 观点与看法',body);self.assertIn('Concrete mechanism',body);self.assertIn('This example supports the mechanism.',body)
             self.assertTrue((w/'output/reader-data.json').is_file());self.assertFalse((w/'output/人物蒸馏.html').exists())
 
 if __name__=='__main__':unittest.main()

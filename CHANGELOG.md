@@ -1,5 +1,15 @@
 # Updates
 
+## 2026.10.23.1
+
+- Rename the reader's short-form section to “观点与看法” while retaining its value threshold, keyword emphasis and stable anchors.
+- Place suitable original images and verified video frames next to the explanations they support; do not impose an image quota or substitute unrelated pictures.
+- Preserve acquired short-post originals in expandable panels. Publication-only removal of available originals requires a located user request or unusable-source reason instead of a generic blanket explanation.
+- Match original-disclosure controls and source-label styles across reading sections. Keep acquisition/login notes in research data, show only necessary reader-facing qualifications, and retain all confirmed source platforms.
+- Preserve observed Xiaohongshu reading URLs separately from stable note IDs. Ingestion rejects redacted or mismatched parameters and protects saved parameterized URLs from bare-link replacement; verification reports missing-parameter warnings. Check actual note bodies separately from parameter preservation; refresh stale links through native cards or official sharing.
+- Clarify discovery of supported browser connections through the host's official runtime. A desktop-control failure does not prove that its Chrome extension connection is unavailable.
+- Publish the approved r4 candidate unchanged: 86 Skill files and the same ZIP bytes. The candidate passed 247 Python and 19 JavaScript tests; r4 changed two references and reused those runtime results, with three additional link tests and current-reader DOM checks. Six current native note links were verified in the in-app browser, one also in Chrome. No new cold start, ASR, complete latest-content research or full reader offline/visual certification is claimed. A reported native-site layout overlay was absent on subsequent original/new-tab checks; its root cause remains unconfirmed.
+
 ## 2026.10.22.3
 
 - Preserve meaningful whitespace, code indentation and paragraph boundaries in publication-original comparisons. Whitespace-only originals fail validation and do not create empty viewpoint disclosures; real short originals remain supported.

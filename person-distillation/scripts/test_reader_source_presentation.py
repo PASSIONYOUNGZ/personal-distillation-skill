@@ -9,6 +9,38 @@ from validate_reader import inspect_html, validate
 
 
 class ReaderSourcePresentation(unittest.TestCase):
+    def test_original_hides_acquisition_notes_without_losing_saved_data_or_qualifiers(self):
+        data=fixture();entry=data['items'][1]['documents'][0]
+        entry['note']='Internal login and extraction method; not reader prose.'
+        before=copy.deepcopy(data);body=render(data,ROOT/'assets')
+        card=ReaderTree(body).root.descendants(ident='unit-reading-1')[0]
+        self.assertNotIn(entry['note'],card.text())
+        self.assertIn('Exact original 1',card.text())
+        self.assertEqual(data,before)
+        entry['display_note']='节选：保留论点与条件，省略后续例子。'
+        body=render(data,ROOT/'assets')
+        card=ReaderTree(body).root.descendants(ident='unit-reading-1')[0]
+        self.assertIn(entry['display_note'],card.text())
+        self.assertNotIn(entry['note'],card.text())
+        self.assertEqual(inspect_html(data,body),[])
+        entry['display_note']=123
+        self.assertIn('work-1: invalid reader-facing original note',validate(data,ROOT/'assets'))
+
+    def test_all_confirmed_platforms_survive_on_each_reading_layer(self):
+        data=fixture()
+        sources=[{'platform':'X','url':'https://x.com/author/status/100'},
+                 {'platform':'小红书','url':'https://www.xiaohongshu.com/explore/example'},
+                 {'platform':'B站','url':'https://www.bilibili.com/video/BVexample/'}]
+        for index,source_class in [(0,'unit-source-links'),(1,'original-source')]:
+            data['items'][index]['sources']=copy.deepcopy(sources)
+            body=render(data,ROOT/'assets')
+            card=ReaderTree(body).root.descendants(ident='unit-reading-'+str(index))[0]
+            links=card.descendants(cls=source_class)[0].descendants(tag='a')
+            targets=[link.attrs['href'] for link in links]
+            for source in sources:self.assertIn(source['url'],targets)
+            self.assertEqual([link.text() for link in links[:3]],['X','小红书','Bilibili'])
+            self.assertEqual(inspect_html(data,body),[])
+
     def aggregate(self):
         data=fixture()
         first,second=data['items'][:2]

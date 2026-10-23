@@ -325,7 +325,12 @@ def viewpoint_originals(members):
             for document in documents:
                 title=document.get('title') or document.get('author') or '原文'
                 chunks+=['<div class="original-heading"><h4>'+esc(title)+'</h4>'+publication_date(item.get('date'))+'</div>']
-                if document.get('note'):chunks+=['<p class="original-note">'+esc(document['note'])+'</p>']
+                # Acquisition notes stay in the saved data. Only an explicit
+                # reader-facing qualifier belongs above an article original;
+                # speech still needs its transcription/correction provenance.
+                note=document.get('display_note')
+                if note is None and 'document' not in document and document.get('type')!='document':note=document.get('note')
+                if note:chunks+=['<p class="original-note">'+esc(note)+'</p>']
                 if 'paragraphs' in document and document.get('type')!='document':
                     chunks+=['<div class="original-speech">'+''.join('<p class="speech"><time>'+esc(p.get('time',''))+'</time>'+esc(p['text'])+'</p>' for p in document['paragraphs'])+'</div>']
                 else:
@@ -360,7 +365,7 @@ def unit_recommendation(unit, members):
 def card_disclosure(body_id, compact=False):
     # A span preserves native details when scripting is unavailable. The reader
     # progressively upgrades only this explicit control to a keyboard button.
-    cls='viewpoint-disclosure' if compact else 'disclosure'
+    cls='disclosure viewpoint-disclosure' if compact else 'disclosure'
     closed,opened=('查看原文','收起原文') if compact else ('展开内容','收起内容')
     return '<span class="'+cls+'" data-card-disclosure="'+esc(body_id)+'"><span class="label-closed">'+closed+'</span><span class="label-open">'+opened+'</span>'+icon('chevron',15 if compact else 18)+'</span>'
 
@@ -495,7 +500,7 @@ def render(data, base):
     def evidence(ids):
         return ''.join(f'<a href="#note-{esc(i)}">{esc(by_id[i].get("short", by_id[i]["title"]))} ↗</a>' for i in ids)
     chunks = ['<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>'+esc(profile['name'])+' · 个人蒸馏阅读版</title><style>'+CSS+'</style></head><body class="no-script" id="top">']
-    reading_navigation=[('notes','内容解读')] if units is None else [(key,title) for kind,key,title in [('deep','notes','深度内容解读'),('viewpoint','viewpoints','精选观点')] if any(u['kind']==kind for u in units)]
+    reading_navigation=[('notes','内容解读')] if units is None else [(key,title) for kind,key,title in [('deep','notes','深度内容解读'),('viewpoint','viewpoints','观点与看法')] if any(u['kind']==kind for u in units)]
     navigation = [('person','认识这个人'),('history','经历时间线'),('mindmap','学习主题导航'),('catalog','内容地图')]+reading_navigation+([('methods','做事逻辑与方法')] if methods else [])+[('directions','学习方向')]
     omitted=set()
     if not profile.get('timeline'):omitted.add('history')
@@ -598,7 +603,7 @@ def render(data, base):
     chunks += ['<div class="filters-panel"><div class="filters"><div class="search-wrap">'+icon('search',16)+'<label for="search" class="sr-only">搜索内容</label><input id="search" aria-label="搜索内容标题、简介和解读" placeholder="搜索内容…"></div><div class="topic-select"><button class="select-trigger" id="topic-trigger" aria-label="筛选主题" aria-haspopup="listbox" aria-expanded="false" aria-controls="topic-menu"><span id="topic-label">全部主题</span>'+icon('chevron',15)+'</button><div class="select-menu" id="topic-menu" role="listbox" aria-label="主题选项" hidden>'+options+'</div></div><div class="stars-select"><button class="select-trigger" id="stars-trigger" aria-label="筛选推荐星级" aria-expanded="false" aria-controls="stars-menu"><span id="stars-label">全部星级</span>'+icon('chevron',15)+'</button><div class="select-menu star-menu" id="stars-menu" role="group" aria-label="推荐星级，可多选" hidden><div class="star-menu-head"><strong>推荐星级</strong><span>多选</span></div>'+star_filters+'</div></div><div class="view-buttons" role="tablist" aria-label="地图视图"><button data-view="theme" role="tab" aria-selected="true" aria-controls="theme-table" tabindex="0">按主题</button><button data-view="time" role="tab" aria-selected="false" aria-controls="time-table" tabindex="-1">按时间</button></div><div class="filter-foot"><span id="count" aria-live="polite">'+str(len(items))+' 项</span><button class="text-button" id="reset" hidden>清除</button></div></div></div><div class="table-shell">']
     if units is not None and len({unit['kind'] for unit in units}) > 1:
         # Last filter chunk ends with the table shell; put the new group before it.
-        layer_buttons='<div class="reading-layer-filter" role="group" aria-label="按阅读形式筛选">'+''.join('<button type="button" data-layer-filter="'+value+'" aria-pressed="'+str(not value).lower()+'">'+label+'</button>' for value,label in [('', '全部内容'),('deep','深度解读'),('viewpoint','精选观点')])+'</div>'
+        layer_buttons='<div class="reading-layer-filter" role="group" aria-label="按阅读形式筛选">'+''.join('<button type="button" data-layer-filter="'+value+'" aria-pressed="'+str(not value).lower()+'">'+label+'</button>' for value,label in [('', '全部内容'),('deep','深度解读'),('viewpoint','观点与看法')])+'</div>'
         chunks[-1]=chunks[-1].replace('<div class="table-shell">',layer_buttons+'<div class="table-shell">')
     themed = ''.join('<tr class="group-row" data-tone="'+str(n%4)+'"><td colspan="5"><span class="topic-chip">'+esc(topic_heading(n,t))+'</span></td></tr>'+rows([i for i in items if i['topic']==t],unit_by_item) for n,t in enumerate(themes))
     chronological = sorted((i for i in items if i.get('date')),key=lambda i:i.get('sort_date') or i['date'],reverse=True)+[i for i in items if not i.get('date')]
@@ -653,7 +658,7 @@ def render(data, base):
         # Source-work count belongs to the map. Reading units are a presentation
         # layer and are not silently counted as additional collected works.
         first=True
-        for kind,ident,title in [('deep','notes','深度内容解读'),('viewpoint','viewpoints','精选观点')]:
+        for kind,ident,title in [('deep','notes','深度内容解读'),('viewpoint','viewpoints','观点与看法')]:
             group=[unit for unit in units if unit['kind']==kind]
             if not group:continue
             chunks += [heading(ident,title)]
@@ -671,7 +676,7 @@ def render(data, base):
                 for unit in group:
                     chunks += [render_unit(unit,by_id,base,first)]
                     first=False
-            chunks += ['<p class="layer-empty" hidden>当前筛选条件下没有'+('深度解读' if kind=='deep' else '精选观点')+'。</p></section>']
+            chunks += ['<p class="layer-empty" hidden>当前筛选条件下没有'+('深度解读' if kind=='deep' else '观点与看法')+'。</p></section>']
     if methods:
         chunks += [heading('methods','做事逻辑与方法'),render_methods(methods,by_id),'</section>']
     if profile.get('directions'):

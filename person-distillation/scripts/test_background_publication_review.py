@@ -73,7 +73,26 @@ class BackgroundAndPublicationReview(unittest.TestCase):
         changed=differences(expected,actual)['a'];self.assertTrue(valid_review(changed,row('full')))
         self.assertFalse(valid_review(changed,row('link_only')))
         actual['items'][0]['documents']=[];changed=differences(expected,actual)['a']
-        self.assertTrue(valid_review(changed,row('link_only')));self.assertFalse(valid_review(changed,row('excerpt')))
+        self.assertFalse(valid_review(changed,row('link_only')))
+        review=row('link_only');review.update(link_only_basis='user_request',link_only_detail='The supplied user request explicitly chooses source links for this item.')
+        self.assertTrue(valid_review(changed,review));self.assertFalse(valid_review(changed,row('excerpt')))
+
+    def test_bulk_source_removal_needs_each_located_exception(self):
+        expected=source('The complete, usable short post.');actual=copy.deepcopy(expected)
+        actual['items'][0]['documents']=[]
+        changed=differences(expected,actual)['a']
+        generic=row('link_only');generic['reason']='Learning summary; originals remain in the workspace.'
+        self.assertFalse(valid_review(changed,generic))
+        with test_workspace() as w:
+            (w/'output').mkdir();(w/'.distill').mkdir();write(w/'output/reader-data.json',actual)
+            with patch('build_reader.build',return_value=expected):
+                with self.assertRaises(ValueError):accept(w,{'items':[generic]})
+                self.assertFalse(status(w)['ready'])
+                write(w/'output/reader-data.json',expected)
+                self.assertTrue(status(w)['ready'])
+        for basis in ('','generic_summary','source_unusable'):
+            r=copy.deepcopy(generic);r.update(link_only_basis=basis,link_only_detail='')
+            self.assertFalse(valid_review(changed,r))
 
     def test_finalizer_cannot_hide_truncation_by_refreshing_render_state(self):
         with test_workspace() as w:

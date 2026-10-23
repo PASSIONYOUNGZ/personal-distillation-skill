@@ -43,7 +43,8 @@ class CurrentBoundaries(unittest.TestCase):
         changed=differences(original('A complete claim. An example.'),original('A complete claim.'))['a']
         self.assertTrue(valid_review(changed,review('excerpt')))
         b={'items':[{'id':'a','documents':[]}]}
-        self.assertTrue(valid_review(differences(original('A claim.'),b)['a'],review('link_only')))
+        r=review('link_only');r.update(link_only_basis='source_unusable',link_only_detail='The synthetic source was identified as a failed extraction in the located material review.')
+        self.assertTrue(valid_review(differences(original('A claim.'),b)['a'],r))
 
     def test_empty_documents_fail_validation_and_render_as_source_link(self):
         docs=[{'format':'text','text':' \t\n '},{'format':'markdown','text':'   '},

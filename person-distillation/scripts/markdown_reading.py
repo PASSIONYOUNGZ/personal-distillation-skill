@@ -149,7 +149,7 @@ def parts(data,link):
     units=reading_units(data)
     if units is None:units=[]
     by_id={i['id']:i for i in data['items']};rows=[]
-    for kind,title in (('deep','深度内容解读'),('viewpoint','精选观点')):
+    for kind,title in (('deep','深度内容解读'),('viewpoint','观点与看法')):
         chosen=[u for u in units if u['kind']==kind]
         if not chosen:continue
         rows+=['## '+title,'']

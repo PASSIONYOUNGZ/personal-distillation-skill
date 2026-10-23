@@ -6,6 +6,7 @@ from pathlib import Path
 import argparse, copy, hashlib, importlib.util, json, math, os, re, shutil, sys, tempfile
 from request_scope import normalize,check_selection,fix_observation_time,publication_value
 from preparation_gate import require as require_preparation,passed as preparation_passed
+from source_links import source_key,guard_update,audit as source_link_audit
 
 def read(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
 def write(path,value):
@@ -127,8 +128,9 @@ def ingest(w,file):
             item['sort_date']=min(verified_dates);item['date']=item['sort_date'][:10];item['date_basis']='earliest_verified_publication_for_work_version'
         # Merge source records by stable platform ID, retaining original URLs/versions.
         old=existing.get(item['id'],{});new={**old,**item}
-        sources={(s['platform'],s.get('id') or s['url']):s for s in old.get('sources',[])}
-        for s in item['sources']:sources[(s['platform'],s.get('id') or s['url'])]=s
+        sources={source_key(s):s for s in old.get('sources',[])}
+        for s in item['sources']:
+            ident=source_key(s);guard_update(sources.get(ident),s);sources[ident]=s
         new['sources']=list(sources.values());existing[item['id']]=new
     write(data(w,'catalog.json'),list(existing.values()))
     return {'items':len(existing),'sources':sum(len(x['sources']) for x in existing.values())}
@@ -429,7 +431,7 @@ def verify(w):
       'selected_items':len(delivery),'selected_by_platform':counts,'quantity_target_met':quantity_met,
       'scope_completion':coverage,'quality_review_recorded':quality_ready,'quality_review_status':quality_reason,'visual_review_recorded':visual_ready,
       'preview_check':preview,'offline_check':offline,'artifact_ready':artifact_ready,'original_request_complete':coverage['scope_supported'],
-      'publication_review':publication,
+      'publication_review':publication,'source_link_warnings':source_link_audit(delivery),
       'delivery_checks_complete':not limitations,'delivery_limitations':limitations,
       'initial_preparation_complete':preparation_passed(w),
       'ready_for_final_delivery':artifact_ready and coverage['scope_supported'],

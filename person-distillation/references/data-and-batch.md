@@ -20,7 +20,7 @@ Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚
 
 材料format支持text/markdown/document/srt/segments。document是结构化blocks（heading/paragraph/quote/list/code/table）；文章保留章节、缩进、表格、链接，不塞成speech。视频稿保留source_segments和时间定位；阅读分组只作安全空白排版。校正版从不可变raw和有依据edits重放；改数字/否定须sensitive_change_verified，protected_phrases保留。
 
-sources至少platform、发布id、url及所属账号source_id；没有稳定账号身份只在单账号历史兼容时按唯一平台映射，不合并双账号。跨平台同版须证据，原始发布时间保留；未知日期null。推荐度1—5或null，旧score仅为历史展示换算，明确null不回退。不足材料不强评或常驻评分教程。
+sources至少platform、发布id、url及所属账号source_id；小红书发布id用稳定note_id，url保留原生／官方分享取得的完整阅读地址及必要参数，按[平台参考](platform-xiaohongshu.md#取得并保留能阅读的原链)获取并验收，不用ID重建裸链；没有稳定账号身份只在单账号历史兼容时按唯一平台映射，不合并双账号。跨平台同版须证据，原始发布时间保留；未知日期null。推荐度1—5或null，旧score仅为历史展示换算，明确null不回退。不足材料不强评或常驻评分教程。
 
 cards文本类型：summary、what、use、workflow、thinking、limit/limits、directions、score_reason、result接受字符串或纯字符串数组；数组表示有序段落，构建HTML和Markdown时统一用双换行连接，不打印Python列表表示。learning是并列学习点，推荐直接写字符串数组；兼容单个字符串并转为单项数组，空值时可从workflow逐项取得。可选字段None视空；不接收嵌套数组、对象或数字混排。item_id、level仍为字符串，evidence仍为来源对象数组。直接维护output/reader-data.json时使用规范字符串字段与learning数组，不把cards兼容形式直接传给独立渲染器。
 
@@ -67,7 +67,7 @@ python <skill>/scripts/publication_review.py status --workspace <workspace>
 {"items":[{"item_id":"source-a","mode":"excerpt","reason":"本次仅展示一段完整判断，完整原稿留底稿。","checks":[{"claim":"已核摘录原字、转折、条件和结论；它能独立读懂且未误示全文。","evidence_locator":"materials/a.md，第2段及最终原文展开区","status":"verified"}],"meaning_preserved":"保留了作者选择局部实现的对象、原因与限制。","omissions":"只省略随后另述的例子；不是截断判断的后半句。"}]}
 ```
 
-mode=full须与标准原文文字及顺序一致；excerpt须是来源中精确片段，并人工说明保留的完整意思与省略范围；link_only须确实没有伪原文，仅来源入口，reason解释原因。full/link_only不需meaning_preserved和omissions。程序核精确文本及哈希，不能判断摘录是否完整表达作者意思；pending检查不通过，不能自动填语义结论。禁止只刷新render-state.json或写一个publication-build说明来绕过复核；verify会独立比对标准来源与最终数据。旧成品不被覆盖，旧派生发现差异则报告需补核，不静默升级。
+mode=full须与标准原文文字及顺序一致；excerpt须是来源中精确片段，并人工说明保留的完整意思与省略范围；link_only须仅来源入口，另填link_only_basis=user_request（用户明确要求）或source_unusable（原稿实际不可用于展示），link_only_detail说明该项具体原因，checks定位请求或原稿问题；不能以通用“学习解读”理由批量删除已取得的可用原文。full/link_only不需meaning_preserved和omissions。程序核精确文本及哈希，不能判断摘录是否完整表达作者意思；pending检查不通过，不能自动填语义结论。禁止只刷新render-state.json或写一个publication-build说明来绕过复核；verify会独立比对标准来源与最终数据。旧成品不被覆盖，旧派生发现差异则报告需补核，不静默升级。
 
 ## 正确启动与审阅命令
 

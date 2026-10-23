@@ -86,7 +86,7 @@ class MarkdownReadingTests(unittest.TestCase):
             distill.render(w)
             markdown=(w/'output/人物蒸馏.md').read_text(encoding='utf-8')
             self.assertIn('## 深度内容解读',markdown)
-            self.assertNotIn('## 精选观点',markdown)
+            self.assertNotIn('## 观点与看法',markdown)
             self.assertIn(cards[0]['what'],markdown)
             self.assertIn((w/'materials/article.md').read_text(encoding='utf-8').strip(),markdown)
             self.assertIn('Evidence API v2.',markdown)

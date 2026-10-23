@@ -4,6 +4,7 @@ from pathlib import Path
 import argparse,json,re
 from render_reader import stars_value, display_sources, unit_recommendation
 from reading_units import reading_units,methods,topic_order
+from source_links import audit as source_link_audit
 
 def validate(data,base):
     if not isinstance(data,dict):return ['Reader data must be an object']
@@ -43,6 +44,8 @@ def validate(data,base):
             if key in item and not isinstance(item[key],str):errors.append(ident+': invalid '+key)
         if not isinstance(item.get('learning',[]),list) or any(not isinstance(x,str) or not x.strip() for x in item.get('learning',[])):errors.append(ident+': invalid learning')
         if not item.get('sources') or any(not url(s.get('url')) or not (s.get('label') or s.get('platform')) for s in item.get('sources',[])):errors.append(ident+': invalid sources')
+        for issue in source_link_audit([item]):
+            if issue['severity']=='error':errors.append(ident+': invalid reading URL '+issue['code'])
         try:
             if stars_value(item) is not None and not item.get('score_reason'):errors.append(ident+': rating needs reason')
         except (ValueError,TypeError):errors.append(ident+': invalid rating')
@@ -52,6 +55,7 @@ def validate(data,base):
         for field in ('documents','transcripts'):
             if field in item and not isinstance(item[field],list):errors.append(ident+': invalid '+field)
         for t in item.get('transcripts',[])+item.get('documents',[]):
+            if 'display_note' in t and not isinstance(t['display_note'],str):errors.append(ident+': invalid reader-facing original note')
             is_document=t.get('type')=='document' or 'document' in t
             # An explicit original URL identifies a displayed article without
             # repeating internal acquisition notes. Speech retains its source/
@@ -234,6 +238,6 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--input',required=True);p.add_argument('--html');a=p.parse_args();path=Path(a.input)
     data=json.loads(path.read_text(encoding='utf-8-sig'));errors=validate(data,path.parent)
     if a.html and not errors:errors+=inspect_html(data,Path(a.html).read_text(encoding='utf-8'))
-    print(json.dumps({'structural_valid':not errors,'errors':errors,'semantic_review':'not performed','browser_review':'not performed'},ensure_ascii=False,indent=2))
+    print(json.dumps({'structural_valid':not errors,'errors':errors,'source_link_warnings':source_link_audit(data.get('items',[])),'semantic_review':'not performed','browser_review':'not performed'},ensure_ascii=False,indent=2))
     if errors:raise SystemExit(1)
 if __name__=='__main__':main()
