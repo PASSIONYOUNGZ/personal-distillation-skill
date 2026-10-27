@@ -64,6 +64,7 @@ class BackgroundAndPublicationReview(unittest.TestCase):
     def test_excerpt_requires_exact_original_and_located_semantic_review(self):
         changed=differences(source('A complete judgment. Supporting example.'),source('A complete judgment.'))['a']
         review=row('excerpt');review.update(meaning_preserved='The complete judgment is preserved.',omissions='Only the supporting example is omitted.')
+        review.update(excerpt_basis='user_request',excerpt_detail='Synthetic request explicitly asks for this judgment only.')
         self.assertTrue(valid_review(changed,review))
         changed['published']['documents'][0]['document']['text']='An invented judgment.'
         self.assertFalse(valid_review(changed,review))
@@ -102,6 +103,7 @@ class BackgroundAndPublicationReview(unittest.TestCase):
             with patch('build_reader.build',return_value=expected):
                 self.assertFalse(status(w)['ready'])
                 review=row('excerpt');review.update(meaning_preserved='The complete independent first judgment is retained.',omissions='The separate condition is discussed in the source, outside this excerpt.')
+                review.update(excerpt_basis='user_request',excerpt_detail='Synthetic explicit request to excerpt the first judgment.')
                 accept(w,{'items':[review]});self.assertTrue(status(w)['ready'])
                 accept(w,{'items':[]});self.assertTrue(status(w)['ready'])
                 expected['items'][0]['documents'][0]['document']['text']+=' New evidence.'

@@ -63,7 +63,9 @@ def valid_review(value,row):
     # Exact substrings prove quotation fidelity only. A reviewer must explain
     # the preserved claim/conditions and the actual omissions. "Accurate short
     # excerpt" alone cannot be used as a replacement for that review.
-    return all(isinstance(row.get(k),str) and row[k].strip() for k in ('meaning_preserved','omissions'))
+    return (row.get('excerpt_basis') in ('long_source','user_request','rights_restriction') and
+            all(isinstance(row.get(k),str) and row[k].strip()
+                for k in ('excerpt_detail','meaning_preserved','omissions')))
 
 
 def load_changes(workspace,reader_path=None):
@@ -76,8 +78,9 @@ def load_changes(workspace,reader_path=None):
 def draft(workspace,reader_path=None):
     changes=load_changes(workspace,reader_path)
     return {'items':[{'item_id':ident,'mode':None,'reason':'','checks':[],
-                     'meaning_preserved':'','omissions':'','link_only_basis':None,'link_only_detail':''} for ident in changes],
-            'next_action':'Review changed originals against their complete source. Preserve available originals by default. Excerpt needs meaning/omissions; link_only needs user_request or source_unusable with a located, item-specific explanation. Never fill a passing semantic claim automatically.'}
+                     'meaning_preserved':'','omissions':'','excerpt_basis':None,'excerpt_detail':'',
+                     'link_only_basis':None,'link_only_detail':''} for ident in changes],
+            'next_action':'Review changed originals against their complete source. Preserve available short posts in full. Excerpt needs a located long_source/user_request/rights_restriction basis and detail, plus meaning/omissions; brevity or keeping the archive elsewhere is not a basis. link_only needs user_request or source_unusable. Never fill a passing semantic claim automatically.'}
 
 
 def accept(workspace,spec,reader_path=None):
@@ -91,7 +94,7 @@ def accept(workspace,spec,reader_path=None):
     for row in rows:
         ident=row.get('item_id')
         if ident not in changes or not valid_review(changes[ident],row):
-            raise ValueError('Changed originals need a located full/excerpt/link_only review; excerpt text must be exact with meaning/omissions reviewed; link_only needs a located user_request/source_unusable basis: '+str(ident))
+            raise ValueError('Changed originals need a located full/excerpt/link_only review; excerpt needs exact text, excerpt_basis/excerpt_detail and meaning/omissions; link_only needs a located user_request/source_unusable basis: '+str(ident))
         kept[ident]={**row,'input_fingerprint':fingerprint(changes[ident])}
     if set(kept)!=set(changes):raise ValueError('Publication review missing/stale items: '+','.join(sorted(set(changes)-set(kept))))
     result={'schema_version':1,'items':[kept[i] for i in sorted(kept)],

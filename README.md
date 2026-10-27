@@ -2,7 +2,7 @@
 
 # Personal Distillation Skill
 
-当前版本 **2026.10.23.1** · [下载 Skill ZIP](dist/person-distillation-2026.10.23.1.zip) · [更新说明](CHANGELOG.md)
+当前版本 **2026.10.27.1** · [下载 Skill ZIP](dist/person-distillation-2026.10.27.1.zip) · [更新说明](CHANGELOG.md)
 
 **Learn from people. Build your own practice.**
 

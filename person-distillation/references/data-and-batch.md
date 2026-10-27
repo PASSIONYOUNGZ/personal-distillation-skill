@@ -64,10 +64,14 @@ python <skill>/scripts/publication_review.py status --workspace <workspace>
 只在工作区内使用另一份阅读数据时可加`--reader-data output/other-reader-data.json`；标准verify核正式output/reader-data.json。草稿不会填通过状态；未变变化项回执可复用，来源或派生文字变化才失效。spec形如：
 
 ```json
-{"items":[{"item_id":"source-a","mode":"excerpt","reason":"本次仅展示一段完整判断，完整原稿留底稿。","checks":[{"claim":"已核摘录原字、转折、条件和结论；它能独立读懂且未误示全文。","evidence_locator":"materials/a.md，第2段及最终原文展开区","status":"verified"}],"meaning_preserved":"保留了作者选择局部实现的对象、原因与限制。","omissions":"只省略随后另述的例子；不是截断判断的后半句。"}]}
+{"items":[{"item_id":"source-a","mode":"excerpt","reason":"按用户明确指定的段落展示。","excerpt_basis":"user_request","excerpt_detail":"request.json中用户指定只展示第2至4段；这不是默认短帖展示方式。","checks":[{"claim":"已对照请求与完整原稿，核所选段落的原字、转折、条件和结论。","evidence_locator":"request.json及materials/a.md第2至4段、最终展开区","status":"verified"}],"meaning_preserved":"所选段落完整包含对象、原因与限制。","omissions":"第1段背景及第5段另一个例子按请求省略。"}]}
 ```
 
-mode=full须与标准原文文字及顺序一致；excerpt须是来源中精确片段，并人工说明保留的完整意思与省略范围；link_only须仅来源入口，另填link_only_basis=user_request（用户明确要求）或source_unusable（原稿实际不可用于展示），link_only_detail说明该项具体原因，checks定位请求或原稿问题；不能以通用“学习解读”理由批量删除已取得的可用原文。full/link_only不需meaning_preserved和omissions。程序核精确文本及哈希，不能判断摘录是否完整表达作者意思；pending检查不通过，不能自动填语义结论。禁止只刷新render-state.json或写一个publication-build说明来绕过复核；verify会独立比对标准来源与最终数据。旧成品不被覆盖，旧派生发现差异则报告需补核，不静默升级。
+mode=full须与标准原文文字及顺序一致。excerpt须是来源中精确片段，并填excerpt_basis：long_source（原作确为长文）、user_request（明确指定节选）或rights_restriction（实际转载限制）；excerpt_detail与checks定位该项的具体依据，再以meaning_preserved和omissions说明主要论述、条件及省略范围。一般“为了精简”“支持解读”“全文已存档”不是节选依据；长文也不能默认只取一句结论。程序检查字段、原字和哈希，不会判断声称的长文或限制是否真实，Agent仍须回读。旧节选回执缺少依据时需补核，不能自动填理由。
+
+link_only须仅来源入口，另填link_only_basis=user_request（用户明确要求）或source_unusable（原稿实际不可用于展示），link_only_detail说明该项具体原因，checks定位请求或原稿问题；不能以通用“学习解读”理由批量删除已取得的可用原文。full/link_only不需excerpt字段、meaning_preserved和omissions。pending检查不通过，不能自动填语义结论。禁止只刷新render-state.json或写一个publication-build说明来绕过复核；verify会独立比对标准来源与最终数据。旧成品不被覆盖，旧派生发现差异则报告需补核，不静默升级。
+
+标准构建以已归档正文为准：documents引用materials中的同一material_id时，正文须与对应原稿一致，不能用相同ID让一句摘录覆盖整篇材料。确需出版节选时在标准构建后的派生数据中处理并走上述审阅。没有原稿的历史HTML只能检查实际展示，不能据“原文全文”标题证明获取完整。
 
 ## 正确启动与审阅命令
 

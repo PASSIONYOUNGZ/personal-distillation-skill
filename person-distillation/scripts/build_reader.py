@@ -98,7 +98,10 @@ def build(w):
         for n,m in enumerate(item.get('materials',[])):
             if m.get('role') not in ('transcript','article','project'):continue
             material_id=m.get('material_id') or m['file']
-            if material_id in attached:continue
+            # An ID proves identity, not that an imported document contains the
+            # whole archived body. Check it below before deduplicating articles.
+            existing=next((v for v in documents+ts if v.get('material_id')==material_id),None)
+            if material_id in attached and m.get('role')=='transcript':continue
             if m.get('reader_display')=='source_link_only':
                 if not m.get('reader_display_reason'):raise ValueError('Source-link-only material needs a reason: '+ident)
                 continue
@@ -114,6 +117,14 @@ def build(w):
                 if m['format']=='document':document=read(path)
                 else:document={'format':'markdown' if m['format']=='markdown' else 'text','text':path.read_text(encoding='utf-8-sig') if m['format'] in ('text','markdown') else '\n'.join(s['text'] for s in segs)}
                 full.update(type='document',document=document)
+            if existing is not None:
+                from publication_review import texts
+                archived=texts({'documents':[full]})
+                imported=texts({'documents':[existing]}) if 'document' in existing else []
+                if [t.rstrip('\n') for t in imported]!=[t.rstrip('\n') for t in archived]:
+                    raise ValueError('Reader original differs from archived material: '+ident+' / '+str(material_id)+
+                                     '; preserve the full source in the standard build, then review any publication excerpt separately')
+                continue
             (ts if spoken else documents).append(full);attached.add(material_id)
         corrected=d/'corrected'/f'{ident}.json'
         if corrected.exists():

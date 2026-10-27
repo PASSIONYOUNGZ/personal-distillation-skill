@@ -64,6 +64,8 @@ id仅字母/数字/下划线/连字符；kind为deep或viewpoint；title/topic/s
 | hero_image/showcase | hero_image仅用于明确指定主图的兼容展示；普通首页默认右侧“近期精选”。showcase为可选真实封面条目ID，不应用同三项再重复一排速览 |
 | recent_items | 可选最多三项ID，均须有真实原作cover及非空what解读。Agent查看封面后从本轮作品选择近期且适合展示的作品，排除密集正文截图和无图/索引条目；不指定时按sort_date/date从合格cover+what项目取三项，未知日期置后。不足按实显示、零项隐藏，无文字卡兜底；源图URL、caption和核实依据保留在cover，首屏不额外常显图源文字 |
 
+首页计数从最终items逐项核kind及同版关系，不用deep/viewpoint数量代替视频/图文数量；合并两个来源作品的观点仍按两个作品计。不要用“跨平台核对、三星以上、研究截至”等过程描述替代这四项信息。类别不明先核来源，不为补齐数字猜测。
+
 旧value/traits/map_center仅供兼容既有资料；维护旧页时将有证据的特点融入biography的一段介绍，学习建议留末尾，不恢复重复栏目。旧biography多小节应人工合并有用信息，不把逐年履历直接拼成长段或只换标题。介绍不设机械字数，保留关键身份和代表实践；来源集中可查，无关未知与泛泛免责声明不挤进正文。
 
 items需id（字母数字下划线连字符）、title/short/topic/date、sources（label或platform、url及稳定ID）、summary、recommendation_stars（1—5或null）、score_reason、what、learning数组、limit。summary在页面叫“内容简介”，通常1—3句具体说明原作对象、问题与动作／观点；推荐理由另写。short是保留核心辨识度的导航标题，不机械截字或把长原题直接挤进窄列；原题保留title。可选result、kind、cover/images、documents、transcripts、coverage。无日期用null，视频无稿仍为kind=video。图有原作来源和准确caption，不用生成图冒充证据。

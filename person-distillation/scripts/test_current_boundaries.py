@@ -41,7 +41,8 @@ class CurrentBoundaries(unittest.TestCase):
 
     def test_exact_excerpt_and_link_only_are_still_supported(self):
         changed=differences(original('A complete claim. An example.'),original('A complete claim.'))['a']
-        self.assertTrue(valid_review(changed,review('excerpt')))
+        excerpt=review('excerpt');excerpt.update(excerpt_basis='user_request',excerpt_detail='Synthetic explicit request for the claim only.')
+        self.assertTrue(valid_review(changed,excerpt))
         b={'items':[{'id':'a','documents':[]}]}
         r=review('link_only');r.update(link_only_basis='source_unusable',link_only_detail='The synthetic source was identified as a failed extraction in the located material review.')
         self.assertTrue(valid_review(differences(original('A claim.'),b)['a'],r))

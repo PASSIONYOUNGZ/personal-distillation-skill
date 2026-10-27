@@ -1,5 +1,13 @@
 # Updates
 
+## 2026.10.27.1
+
+- Preserve complete acquired short-post originals independently of the one- or two-sentence viewpoint summary. A matching material ID no longer bypasses comparison with the archived article body.
+- Require a located, item-specific basis for publication excerpts: an actual long source, an explicit user request or a real reproduction restriction. Generic brevity or keeping the full text elsewhere is insufficient; exact wording and preserved meaning still require review.
+- Correct the excerpt example and clarify X detail-body acquisition, context-dependent short posts and the selected media counts shown in the reader's scope.
+- Keep genuinely one-sentence originals valid. No minimum word count, automatic padding or rewritten quotations is introduced.
+- Publish the approved local candidate unchanged: 87 Skill files and byte-identical ZIP. Candidate validation passed 254 Python tests and 19 JavaScript tests with no skips, plus Skill-format validation. JavaScript includes DOM highlighting/export/reload on a repaired local reader. Whole-reader browser visual and actual offline opening were not executed because the browser tool rejected file URLs. No new platform access, full source audit or cold-start claim is made.
+
 ## 2026.10.23.1
 
 - Rename the reader's short-form section to “观点与看法” while retaining its value threshold, keyword emphasis and stable anchors.
