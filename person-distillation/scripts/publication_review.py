@@ -60,6 +60,11 @@ def valid_review(value,row):
         return (not published and row.get('link_only_basis') in ('user_request','source_unusable')
                 and isinstance(row.get('link_only_detail'),str) and bool(row['link_only_detail'].strip()))
     if mode!='excerpt' or not published or not all(text and any(text in original for original in source) for text in published):return False
+    # A few hundred characters is a short original, even when its argument is
+    # dense. Long-source classification cannot justify dropping short sources.
+    if row.get('excerpt_basis')=='long_source':
+        if not any(len(text.strip())>500 for text in source):return False
+        if any(len(text.strip())<=500 and text not in published for text in source):return False
     # Exact substrings prove quotation fidelity only. A reviewer must explain
     # the preserved claim/conditions and the actual omissions. "Accurate short
     # excerpt" alone cannot be used as a replacement for that review.

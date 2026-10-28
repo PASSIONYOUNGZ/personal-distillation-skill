@@ -2,7 +2,7 @@
 import copy, hashlib
 from urllib.parse import urlparse
 
-MAINSTREAM = {'小红书', '抖音', 'B站', 'X', 'Twitter', '微博', '公众号', '微信公众号', 'YouTube', 'TikTok', 'Instagram', 'LinkedIn'}
+MAINSTREAM = {'小红书', '抖音', 'B站', 'Bilibili', 'bilibili', '哔哩哔哩', 'X', 'Twitter', 'twitter', '微博', '公众号', '微信公众号'}
 READY = {'ready', 'ready_public', 'ready_login'}
 TECHNICAL = {'tool_timeout', 'transport_error', 'connection_unverified', 'extraction_empty', 'not_probed'}
 
@@ -107,7 +107,9 @@ def assess(access, phase='preparation', known_sources=()):
             elif status in ('login_required', 'partial_due_login', 'verification_required', 'captcha', 'needs_user'):
                 if not item.get('evidence'):
                     checks.append({**r, 'action': 'verify_visible_gate_before_user_action'}); continue
-                minor = c.get('mainstream', c['platform'] in MAINSTREAM) is False and c.get('necessity') == 'supplemental' and not c.get('required')
+                # Only an explicit task dependency overrides the default login
+                # scope; discovery alone must not produce another login prompt.
+                minor = c['platform'] not in MAINSTREAM and c.get('necessity')!='explicit' and not c.get('required')
                 if minor:
                     gaps.append({**r, 'action': 'skip_login_gated_minor_platform', 'evidence': item['evidence']}); continue
                 if decision == 'defer_with_gap' and authorized:
@@ -169,6 +171,7 @@ def assess(access, phase='preparation', known_sources=()):
     pending = list(grouped.values())
     # Inventory is bounded; a tools timeout completes the lightweight probe. Never await deep paging to show this batch.
     presented = pending if batch_ready or phase == 'running' else []
+    login_platforms=list(dict.fromkeys(a['platform'] for a in presented if a.get('platform') and any('login' in t or 'verification' in t for t in a.get('action_types',[]))))
     window = 'closed' if batch_ready and not pending and not blocking and not missing else 'awaiting_user' if presented else 'open'
     all_ready = window == 'closed' and not checks and not any(g['action'] != 'skip_login_gated_minor_platform' for g in gaps)
     readiness = 'needs_user' if presented else 'needs_probe' if window != 'closed' or checks else 'partial' if gaps else 'ready'
@@ -177,6 +180,9 @@ def assess(access, phase='preparation', known_sources=()):
             'user_actions': presented, 'ready_capabilities': ready, 'allowed_operations': permissions,
             'coverage_gaps': gaps, 'agent_checks': checks, 'alternative_routes': fallbacks,
             'manual_batch': {'ready_to_present': batch_ready or phase == 'running', 'actions': pending,
+                             'interaction': {'kind':'choice_dialog','options':['login_all','skip_all','select_platforms'],
+                                             'platforms':login_platforms,
+                                             'partial_selection':'Use platform multi-select if available; otherwise per-platform login/skip choices in one batch. No default is a submitted decision.'} if login_platforms else None,
                              'unresolved_access': gaps, 'pending_agent_checks': checks,
                              'next_action': 'present_one_combined_manual_batch' if presented else 'finish_rapid_inventory_and_platform_checks' if not batch_ready else 'recheck_needed_capabilities'},
             'allowed_work_before_ready': ['bounded_identity_discovery', 'small_platform_probes', 'environment_setup', 'checkpoint'],

@@ -1,5 +1,12 @@
 # Updates
 
+## 2026.10.28.1
+
+- Batch actual login needs into one host choice dialog: log in to all, skip all, or select platforms. Default login scope is Xiaohongshu, Bilibili, Douyin, WeChat articles, X and Weibo. Public material elsewhere remains usable; login-gated other platforms are skipped unless explicitly required by the user.
+- Verify subject avatars against the author area, nickname, stable account ID and actual image. Bilibili avatar account URLs with a UID different from the subject's verified Bilibili account now fail reader validation.
+- Preserve acquired originals of up to 500 characters in full by default, including the 500-character boundary. Publication review rejects long_source as a basis for shortening these originals, including short originals inside aggregated units. Longer originals are not automatically truncated; excerpts still require context and source-based review.
+- Publish the approved local candidate unchanged: 88 Skill files and byte-identical ZIP. The candidate passed 263 Python regressions, Skill-format validation and relative documentation-link checks. CSS/JavaScript are unchanged. This release does not claim a new live login-dialog test, subject-avatar collection, end-to-end research run, browser visual check or offline reopening test.
+
 ## 2026.10.27.1
 
 - Preserve complete acquired short-post originals independently of the one- or two-sentence viewpoint summary. A matching material ID no longer bypasses comparison with the archived article body.

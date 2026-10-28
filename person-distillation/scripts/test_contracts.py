@@ -125,7 +125,7 @@ class Contracts(unittest.TestCase):
 
     def test_real_login_can_be_batched_while_other_tool_recovers(self):
         c=channel('slow',capabilities={'text':{'status':'tool_timeout','evidence':['synthetic timeout']}},needed=['text'])
-        b=channel('login','B',capabilities={'text':{'status':'login_required','evidence':['synthetic visible login wall']}},needed=['text'])
+        b=channel('login','B站',capabilities={'text':{'status':'login_required','evidence':['synthetic visible login wall']}},needed=['text'])
         r=assess(access(c,b));self.assertEqual(len(r['user_actions']),1)
         self.assertEqual(r['user_actions'][0]['source_ids'],['login'])
         self.assertFalse(r['allowed_operations'])
@@ -202,7 +202,7 @@ class Contracts(unittest.TestCase):
             with self.assertRaises(ValueError):require(w,'acquisition',source='author-a',capability='text')
 
     def test_two_publishers_share_one_login_not_pagination_budget(self):
-        a=channel('one',session_ref='login-A');b=channel('two',session_ref='login-A')
+        a=channel('one',session_ref='login-A',required=True);b=channel('two',session_ref='login-A',required=True)
         for c in (a,b):c['capabilities']={'catalog':{'status':'login_required','evidence':['synthetic gate']}}
         r=assess(access(a,b));self.assertEqual(len(r['user_actions']),1)
         self.assertEqual(set(r['user_actions'][0]['source_ids']),{'one','two'})
@@ -220,7 +220,7 @@ class Contracts(unittest.TestCase):
 
     def test_manual_batch_does_not_wait_for_deep_catalog(self):
         c=channel('a','A');c['capabilities']['catalog']={'status':'unknown'}
-        b=channel('b','B');b['capabilities']['text']={'status':'login_required','evidence':['synthetic gate']}
+        b=channel('b','B站');b['capabilities']['text']={'status':'login_required','evidence':['synthetic gate']}
         r=assess(access(c,b));self.assertTrue(r['manual_batch']['ready_to_present']);self.assertTrue(r['user_actions'])
 
     def test_bounded_fuzzy_request(self):

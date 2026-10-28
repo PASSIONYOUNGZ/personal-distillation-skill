@@ -180,7 +180,7 @@ class AcquisitionTests(unittest.TestCase):
 
     def test_manual_batch_waits_for_all_front_probes(self):
         a={'inventory_reviewed':True,'inventory_evidence':['synthetic accounts'],
-           'channels':[{'name':p,'mainstream':True,'preparation_probe_completed':p=='A','preparation_probe_evidence':['synthetic gate'] if p=='A' else [],
+           'channels':[{'name':p,'required':True,'preparation_probe_completed':p=='A','preparation_probe_evidence':['synthetic gate'] if p=='A' else [],
                 'needed':['catalog'],'capabilities':{'catalog':{'status':'login_required','evidence':['synthetic gate']}}} for p in ('A','B')]}
         r=preflight.assess(a);self.assertFalse(r['manual_batch']['ready_to_present']);self.assertFalse(r['user_actions'])
         self.assertEqual(len(r['manual_batch']['actions']),2)

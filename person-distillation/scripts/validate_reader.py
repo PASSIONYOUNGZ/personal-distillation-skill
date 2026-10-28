@@ -103,6 +103,16 @@ def validate(data,base):
     if p.get('hero_image'):pic(p['hero_image'],'hero')
     if p.get('avatar'):
         pic(p['avatar'],'subject avatar')
+        from urllib.parse import urlparse
+        def bili_uid(value):
+            parsed=urlparse(value or '')
+            if parsed.hostname!='space.bilibili.com':return None
+            found=re.match(r'^/(\d+)(?:/|$)',parsed.path)
+            return found[1] if found else None
+        avatar_uid=bili_uid(p['avatar'].get('account_url') or p['avatar'].get('url'))
+        subject_uids={uid for a in p.get('accounts',[]) if (uid:=bili_uid(a.get('url')))}
+        if avatar_uid and subject_uids and avatar_uid not in subject_uids:
+            errors.append('Subject avatar Bilibili UID differs from verified subject accounts')
         for k in ('platform','observed_at','selection_reason'):
             if not isinstance(p['avatar'].get(k),str) or not p['avatar'][k].strip():errors.append('Subject avatar missing '+k)
     if set(p.get('showcase',[]))-set(ids):errors.append('Unknown showcase item')
