@@ -1,0 +1,51 @@
+[
+  {
+    "name": "数字生命卡兹克",
+    "file": "examples/kazike.html",
+    "original_filename": "数字生命卡兹克-近期30项蒸馏.html",
+    "bytes": 11801123,
+    "sha256": "1fcff8f933db3be17c2fa7c7da49ee53c9117adb0ad9b8dcf1d180b3a3f10d70"
+  },
+  {
+    "name": "宝玉",
+    "file": "examples/baoyu.html",
+    "original_filename": "宝玉-最近30项蒸馏.html",
+    "bytes": 1960671,
+    "sha256": "ffdda697bbe4eafa0fb4b1c7020ba971f5d4a64606166144d85ffa91d9de250c"
+  },
+  {
+    "name": "归藏",
+    "file": "examples/guizang.html",
+    "original_filename": "歸藏_最近30项_蒸馏.html",
+    "bytes": 6419553,
+    "sha256": "329e98f4ffcf8550eef86eef3b88165c6a36b0872bd363d5c3920971799304ba"
+  },
+  {
+    "name": "张咋啦 Zara",
+    "file": "examples/zara.html",
+    "original_filename": "张咋啦Zara_最近30项_蒸馏.html",
+    "bytes": 2160703,
+    "sha256": "41704670a7e8845a0644eed0411f0327766e7ed657d3a9470e460d3005c36a4e"
+  },
+  {
+    "name": "oil · 欧呦",
+    "file": "examples/oil.html",
+    "original_filename": "oil-oil_最近30项_蒸馏.html",
+    "bytes": 5114225,
+    "sha256": "d39764da48dde0e7c68183e8a0c10ebc6a73ac8edbf8062cdffa792bbcca5712"
+  },
+  {
+    "name": "神烦老狗",
+    "file": "examples/shenfanlaogou.html",
+    "original_filename": "神烦老狗_最近30项_蒸馏.html",
+    "bytes": 3856018,
+    "sha256": "9c8bec81dd73b54bd902b9d6e6f30cf824570104d429f64c934409f6ba58aefe"
+  },
+  {
+    "name": "花叔",
+    "file": "examples/huashu.html",
+    "original_filename": "花叔_最近30项_蒸馏阅读版.html",
+    "bytes": 4555773,
+    "sha256": "c14ddadd73bdc6141f35a80b86685c4d11f3b56e71c666a0eb919396f75c72e5"
+  }
+]
