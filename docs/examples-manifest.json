@@ -2,50 +2,50 @@
   {
     "name": "数字生命卡兹克",
     "file": "examples/kazike.html",
-    "original_filename": "数字生命卡兹克-近期30项蒸馏.html",
-    "bytes": 11801123,
-    "sha256": "1fcff8f933db3be17c2fa7c7da49ee53c9117adb0ad9b8dcf1d180b3a3f10d70"
+    "original_filename": "数字生命卡兹克_逐篇精修版.html",
+    "bytes": 24459703,
+    "sha256": "74e75f4fc8617eb30d08f7894e387f63b7bbc392650d2843f14ab16911bafbef"
   },
   {
     "name": "宝玉",
     "file": "examples/baoyu.html",
-    "original_filename": "宝玉-最近30项蒸馏.html",
-    "bytes": 1960671,
-    "sha256": "ffdda697bbe4eafa0fb4b1c7020ba971f5d4a64606166144d85ffa91d9de250c"
+    "original_filename": "宝玉_逐篇精修版.html",
+    "bytes": 1360116,
+    "sha256": "900fc15a43cbea540f79dcff91a9623ede880d537142cf938c5ba7b25b1eea61"
   },
   {
     "name": "归藏",
     "file": "examples/guizang.html",
-    "original_filename": "歸藏_最近30项_蒸馏.html",
-    "bytes": 6419553,
-    "sha256": "329e98f4ffcf8550eef86eef3b88165c6a36b0872bd363d5c3920971799304ba"
+    "original_filename": "歸藏_逐篇精修版.html",
+    "bytes": 2105519,
+    "sha256": "91c6abc606a37fddd1e502ff415a19af0315e03fba976653273883a600ada543"
   },
   {
     "name": "张咋啦 Zara",
     "file": "examples/zara.html",
-    "original_filename": "张咋啦Zara_最近30项_蒸馏.html",
-    "bytes": 2160703,
-    "sha256": "41704670a7e8845a0644eed0411f0327766e7ed657d3a9470e460d3005c36a4e"
+    "original_filename": "张咋啦Zara_逐篇精修版.html",
+    "bytes": 1996850,
+    "sha256": "f8b5bdcd5f1f2a90f6252303a1d7b812f972df30adca957ab637209f59d4555e"
   },
   {
     "name": "oil · 欧呦",
     "file": "examples/oil.html",
-    "original_filename": "oil-oil_最近30项_蒸馏.html",
-    "bytes": 5114225,
-    "sha256": "d39764da48dde0e7c68183e8a0c10ebc6a73ac8edbf8062cdffa792bbcca5712"
+    "original_filename": "oil-oil_逐篇精修版.html",
+    "bytes": 3442816,
+    "sha256": "6b403b3952f01a9612d0f86671613ea9267555cc5d6f80e7c2e4bfb4e99d40aa"
   },
   {
     "name": "神烦老狗",
     "file": "examples/shenfanlaogou.html",
-    "original_filename": "神烦老狗_最近30项_蒸馏.html",
-    "bytes": 3856018,
-    "sha256": "9c8bec81dd73b54bd902b9d6e6f30cf824570104d429f64c934409f6ba58aefe"
+    "original_filename": "神烦老狗_逐篇精修版.html",
+    "bytes": 3413360,
+    "sha256": "fce2c8a3566b6b4509c0a0c23bc1672cb37aeaca934c43fc4ca53c6aadd254fc"
   },
   {
     "name": "花叔",
     "file": "examples/huashu.html",
-    "original_filename": "花叔_最近30项_蒸馏阅读版.html",
-    "bytes": 4555773,
-    "sha256": "c14ddadd73bdc6141f35a80b86685c4d11f3b56e71c666a0eb919396f75c72e5"
+    "original_filename": "花叔_逐篇精修版.html",
+    "bytes": 4200004,
+    "sha256": "df060e21c4129f9df4b2c8fa61db00f36b188de560188fdd42db2c2e99dcb8fd"
   }
 ]
