@@ -404,7 +404,9 @@ def verify(w):
             if not errors:errors+=inspect_html(reader_data,h.read_text(encoding='utf-8'))
             from publication_review import status as publication_status
             publication=publication_status(w)
-            if not publication['ready']:errors.append('Published originals differ from reviewed sources; publication review missing or stale')
+            if not publication['ready']:
+                errors.append('Original-display requirement unmet: limited originals need an actual user decision' if publication.get('review_ready') else
+                              'Published originals differ from reviewed sources; publication review missing or stale')
     scope=config.get('scope',{}).get('distillation',{})
     selection=read(data(w,'selection.json')) if data(w,'selection.json').exists() else {}
     target=scope.get('count')
@@ -430,7 +432,7 @@ def verify(w):
     result={'structural_closed_loop':not errors,'items':len(items),'sources':len(sources),'analyzed_items':len(cards),'errors':errors,
       'selected_items':len(delivery),'selected_by_platform':counts,'quantity_target_met':quantity_met,
       'scope_completion':coverage,'quality_review_recorded':quality_ready,'quality_review_status':quality_reason,'visual_review_recorded':visual_ready,
-      'preview_check':preview,'offline_check':offline,'artifact_ready':artifact_ready,'original_request_complete':coverage['scope_supported'],
+      'preview_check':preview,'offline_check':offline,'artifact_ready':artifact_ready,'original_request_complete':coverage['scope_supported'] and publication['ready'],
       'publication_review':publication,'source_link_warnings':source_link_audit(delivery),
       'delivery_checks_complete':not limitations,'delivery_limitations':limitations,
       'initial_preparation_complete':preparation_passed(w),

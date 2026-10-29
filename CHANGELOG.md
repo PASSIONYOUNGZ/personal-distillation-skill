@@ -1,5 +1,12 @@
 # Updates
 
+## 2026.10.29.1
+
+- Separate accepted quotation review from fulfillment of the original-display goal. A restriction-based excerpt no longer silently makes the final reader ready. Report affected items; retain genuine host limits and require an actual user decision before treating reduced display as the accepted goal. Standard full originals and an already explicit excerpt request add no second confirmation.
+- Do not introduce blanket copyright finalizers or uniform per-post word caps for public learning materials. Preserve acquired originals by default; exact quotation alone does not prove the requested original coverage.
+- Clarify incremental candidate and exclusion records, source-located comprehension review, and recording browser/custom acquisition through the existing acquisition log. No duplicate ledger, image quota or new runtime dependency is introduced.
+- Publish the approved local candidate unchanged: 89 Skill files and byte-identical ZIP. Validation passed 268 Python and 19 JavaScript/DOM tests, Skill format and documentation paths. Replay of eight supplied short-post originals detects unmet display goals in the old excerpts; their full-source restorations appear in a local reader. Supplied research materials and restored readers remain outside this release. No new live-platform research, browser visual or actual offline-reopening pass is claimed.
+
 ## 2026.10.28.1
 
 - Batch actual login needs into one host choice dialog: log in to all, skip all, or select platforms. Default login scope is Xiaohongshu, Bilibili, Douyin, WeChat articles, X and Weibo. Public material elsewhere remains usable; login-gated other platforms are skipped unless explicitly required by the user.

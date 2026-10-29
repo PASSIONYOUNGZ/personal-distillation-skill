@@ -24,7 +24,7 @@ sources至少platform、发布id、url及所属账号source_id；小红书发布
 
 cards文本类型：summary、what、use、workflow、thinking、limit/limits、directions、score_reason、result接受字符串或纯字符串数组；数组表示有序段落，构建HTML和Markdown时统一用双换行连接，不打印Python列表表示。learning是并列学习点，推荐直接写字符串数组；兼容单个字符串并转为单项数组，空值时可从workflow逐项取得。可选字段None视空；不接收嵌套数组、对象或数字混排。item_id、level仍为字符串，evidence仍为来源对象数组。直接维护output/reader-data.json时使用规范字符串字段与learning数组，不把cards兼容形式直接传给独立渲染器。
 
-analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留检索摘要，但不能覆盖详细小节。请求使用schema_version=4，cards逐项明确reading_layer=deep/viewpoint；深读有analysis_sections，观点以summary常显判断，允许what保存内部理解，不再使用interpretation_kind旧分类。.distill/screening.json记录在线初筛，minimum_stars默认3；提供集合默认保留用户给定项。quality-spec.items.comprehension为[{source_point,evidence_locator,reader_section}]，映射主要原作内容到实际页面小节。所有审阅（包括提供集合）需要comprehension，不以minimum_stars=1关闭理解审阅。旧2/3请求不再执行，保留原稿和用户修改，在独立目录建立当前任务。
+analysis_sections为有序数组，每项{title,paragraphs:[完整解释段落]}，同时保真进入Markdown和HTML；what可保留检索摘要，但不能覆盖详细小节。请求使用schema_version=4，cards逐项明确reading_layer=deep/viewpoint；深读有analysis_sections，观点以summary常显判断，允许what保存内部理解，不再使用interpretation_kind旧分类。.distill/screening.json记录在线初筛，minimum_stars默认3；提供集合默认保留用户给定项。quality-spec.items.comprehension为[{source_point,evidence_locator,reader_section}]，映射主要原作内容到实际页面小节。source_point提炼原作实际论点，evidence_locator给可回查的段落、原句位置或音画时间；不从已写卡片批量复制段落并自动填verified来充当核对。逐字引用可能与卡片相同，不按字符串相等机械拒绝，实际检查仍回到原材料。所有审阅（包括提供集合）需要comprehension，不以minimum_stars=1关闭理解审阅。旧2/3请求不再执行，保留原稿和用户修改，在独立目录建立当前任务。
 
 可选`.distill/reading-units.json`是阅读单元对象数组，结构见[reader-data](reader-data.md)。每份入选来源在一个主要单元中出现，聚合不改变作品计数；完整来源卡继续保留。quality-spec另加unit_reviews：
 
@@ -68,6 +68,8 @@ python <skill>/scripts/publication_review.py status --workspace <workspace>
 ```
 
 mode=full须与标准原文文字及顺序一致。excerpt须是来源中精确片段，并填excerpt_basis：long_source（原作确为长文）、user_request（明确指定节选）或rights_restriction（实际转载限制）；excerpt_detail与checks定位该项的具体依据，再以meaning_preserved和omissions说明主要论述、条件及省略范围。一般“为了精简”“支持解读”“全文已存档”不是节选依据；长文也不能默认只取一句结论。程序检查字段、原字和哈希，不会判断声称的长文或限制是否真实，Agent仍须回读。旧节选回执缺少依据时需补核，不能自动填理由。
+
+不为公开学习材料自行安排统一版权节选脚本或统一词数上限。只在实际存在输出限制时使用rights_restriction，逐项说明具体影响；公开可读和学习用途不是让脚本自动推导法律许可的字段。该例外的review_ready仅表示引用审阅已记录，不代表原文展示要求完成：status另列original_display_complete、display_requirement_satisfied及pending_display_decision_items。缺少实际用户接受时ready=false，verify不把作品数量达标当成原请求全部完成。先沿可用且允许的材料路径满足全文目标；确实无法满足时说明受影响项目和实际缺口。只有用户确实接受受限展示，才在该项填写display_decision={"by":"user","choice":"accept_limited_original","evidence":"实际回复及对应项目"}；预选、等待和Agent自行判断不能代填。已明确要求节选的user_request及标准全文不增加第二次确认。旧例外回执不自动视为用户接受。
 
 link_only须仅来源入口，另填link_only_basis=user_request（用户明确要求）或source_unusable（原稿实际不可用于展示），link_only_detail说明该项具体原因，checks定位请求或原稿问题；不能以通用“学习解读”理由批量删除已取得的可用原文。full/link_only不需excerpt字段、meaning_preserved和omissions。pending检查不通过，不能自动填语义结论。禁止只刷新render-state.json或写一个publication-build说明来绕过复核；verify会独立比对标准来源与最终数据。旧成品不被覆盖，旧派生发现差异则报告需补核，不静默升级。
 

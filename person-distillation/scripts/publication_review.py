@@ -73,6 +73,26 @@ def valid_review(value,row):
                 for k in ('excerpt_detail','meaning_preserved','omissions')))
 
 
+def display_requirement(rows):
+    """A permitted restriction does not silently amend the user's display goal.
+
+    Do not reject a genuinely required limited quotation or override its host.
+    Report the unmet original-display goal until the user actually accepts it.
+    """
+    restricted=[r for r in rows if r.get('mode')=='excerpt' and r.get('excerpt_basis')=='rights_restriction']
+    pending=[]
+    for row in restricted:
+        decision=row.get('display_decision')
+        if not (isinstance(decision,dict) and decision.get('by')=='user' and
+                decision.get('choice')=='accept_limited_original' and
+                isinstance(decision.get('evidence'),str) and decision['evidence'].strip()):
+            pending.append(row['item_id'])
+    return {'original_display_complete':all(r.get('mode')=='full' for r in rows),
+            'display_requirement_satisfied':not pending,
+            'limited_original_items':[r['item_id'] for r in restricted],
+            'pending_display_decision_items':pending}
+
+
 def load_changes(workspace,reader_path=None):
     from build_reader import build
     w=Path(workspace).resolve();path=local(w,reader_path or 'output/reader-data.json')
@@ -85,7 +105,7 @@ def draft(workspace,reader_path=None):
     return {'items':[{'item_id':ident,'mode':None,'reason':'','checks':[],
                      'meaning_preserved':'','omissions':'','excerpt_basis':None,'excerpt_detail':'',
                      'link_only_basis':None,'link_only_detail':''} for ident in changes],
-            'next_action':'Review changed originals against their complete source. Preserve available short posts in full. Excerpt needs a located long_source/user_request/rights_restriction basis and detail, plus meaning/omissions; brevity or keeping the archive elsewhere is not a basis. link_only needs user_request or source_unusable. Never fill a passing semantic claim automatically.'}
+            'next_action':'Preserve available short posts in full; do not add a generic copyright/word-cap finalizer. Review any actual excerpt against its complete source. A real rights_restriction may bind output, but leaves the original-display goal unmet until the user explicitly accepts limited originals; never fabricate display_decision. No extra decision is needed for standard full originals. Exact wording alone does not prove completeness.'}
 
 
 def accept(workspace,spec,reader_path=None):
@@ -111,13 +131,16 @@ def accept(workspace,spec,reader_path=None):
 def status(workspace,reader_path=None):
     try:
         w=Path(workspace).resolve();changes=load_changes(w,reader_path)
-        if not changes:return {'ready':True,'changed_items':[],'status':'standard_originals_preserved'}
+        if not changes:return {'ready':True,'review_ready':True,'changed_items':[],'status':'standard_originals_preserved',**display_requirement([])}
         path=w/'.distill/publication-review.json';receipt=read(path) if path.is_file() else {}
         rows={r.get('item_id'):r for r in receipt.get('items',[])} if receipt.get('schema_version')==1 else {}
         missing=[ident for ident,value in changes.items() if ident not in rows or
                  rows[ident].get('input_fingerprint')!=fingerprint(value) or not valid_review(value,rows[ident])]
-        return {'ready':not missing,'changed_items':list(changes),'pending_items':missing,
-                'status':'reviewed_publication_derivative' if not missing else 'changed_originals_need_review'}
+        display=display_requirement([rows[ident] for ident in changes if ident not in missing])
+        if missing:display.update(original_display_complete=False,display_requirement_satisfied=False)
+        ready=not missing and display['display_requirement_satisfied']
+        return {'ready':ready,'review_ready':not missing,'changed_items':list(changes),'pending_items':missing,**display,
+                'status':'changed_originals_need_review' if missing else 'limited_originals_need_user_decision' if not ready else 'reviewed_publication_derivative'}
     except (ValueError,KeyError,TypeError,OSError) as exc:return {'ready':False,'status':'invalid_publication_inputs','reason':str(exc)}
 
 
