@@ -1,1 +1,1 @@
-从人物公开经历、图文、视频与作品中提炼可学习的方法，交付有来源的离线 HTML 阅读版。An agent skill to learn from people’s public work.
+从人物公开经历、文章、视频与作品中提炼值得学习的方法，生成有来源、可离线阅读的 HTML。Learn from people’s public work.

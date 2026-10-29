@@ -4,7 +4,7 @@
 
 “近期一些”“有价值的代表内容”已有范围意图。Agent快速作有界解释并说明，例如按更新密度取近期最多若干项；记录original_request、agent_interpretation、sample_budget、selection_basis、stop_condition。不固定所有人物20项或几个月，也不要求整数问卷。完全没范围才补问。不用代表集合冒充最新N。
 
-新请求使用schema_version=4。未强调严格最近、而是希望均衡了解一个人的请求，按已有数量／时间意图解释为有界representative；如“均衡蒸馏30项”保存sample_budget=30，停止条件说明达到预算或已核相关材料耗尽。不能把“最近30项”改成代表集合，也不能因为有偏好就在原时间区间外找较早作品补齐。没有任何数量、时间或有界代表意图仍只补问范围。
+新请求使用schema_version=4。未强调严格最近、而是希望均衡了解一个人的请求，按已有数量／时间意图解释为有界representative；如“均衡蒸馏30项”保存sample_budget=30，停止条件说明达到预算或已核相关材料耗尽。“最近30项”仍保留从近到远的次序，不能改成任意代表集合；数量是否必须达到与时间次序分别记录。固定时间区间不能因为有偏好就在区间外补齐。没有任何数量、时间或有界代表意图仍只补问范围。
 
 ## 形式偏好与阅读层分开
 
@@ -21,7 +21,7 @@ scope.content_preferences接受prefer_kinds、only_kinds和balance。形式为ar
 
 默认跨平台已核同版去重总作品数；同题只关联，不凭同题合并文章/不同视频/修订版。同版跨日分发保留所有时间，默认按作品版本最早已核发布时间排序（sort_date/date_basis）；原作实质增订另版。用户按发布条目计数则count_basis=publication，每发布项独立。置顶、纯转发和无判断互动不自动算原创。
 
-最新20项默认指初筛后三星及以上的最近20项：每个核心目录越过合格第20项所在日期或真实末页，保留此前一二星排除依据，再核同日候选。未知日期和边界先后不能用稳定ID推断。用户明确“最近20项全部、不要筛”时minimum_stars=1，按原集合整理。每平台数量另存by_platform，交付为去重并集，不删除额外原链来凑数。
+普通“最近20项”以20为目标上限，新request显式写count_policy=target并保存原话，简述“按质量筛选，最多20项，不足如实交付”，不追加问卷。用户强调“必须20项／严格补齐”才写exact；脚本对未写该字段的已有请求仍按原精确数量解释，不能静默改旧范围。两者都按合格作品从近到远选择，核核心目录越过实际入选边界及同日候选，保留低价值排除依据。未知日期和边界先后不能用稳定ID推断。用户明确“最近20项全部、不要筛”时minimum_stars=1，按原集合整理。每平台数量另存by_platform，交付为去重并集，不删除额外原链来凑数。
 
 时间含首尾日，以用户实际时区按日历月份解释“近三个月”，保存start/end与as_of；数量+时间取交集。长任务固定as_of，不不断追新。历史区间核区间上界，无需今天首页。
 
@@ -39,9 +39,9 @@ mode=count/time/count_in_time/all/representative/provided；all只用于明确�
 {"schema_version":4,"original_request":"均衡蒸馏林示例近期一些有代表性的内容，多看长文和项目","person":{"name":"林示例","seed_urls":[]},"scope":{"mode":"representative","sample_budget":12,"minimum_stars":3,"agent_interpretation":"近期有界代表集合，最多12项独立作品","selection_basis":"实质内容、主题变化、反例及偏好的文章和项目","stop_condition":"达到样本预算或已核相关材料耗尽；受限记缺口","content_preferences":{"prefer_kinds":["article","project"],"only_kinds":[],"balance":"balanced"},"unit":"total","order":"representative","platforms":[],"timezone":"使用者实际时区"}}
 ```
 
-脚本校结构，不自动猜自然语言。init保存固定as_of；精确数量不被擅改成样本。request变更用distill.py amend --request <新请求> --revision-evidence <用户修改依据>，旧请求存request-history，成功稿/会话不删除；范围回执重核，相关画像/集合重审。不同人物用新目录或明确身份依据，不能偷套旧准备。
+脚本校结构，不自动猜自然语言。init保存固定as_of；count_policy只用于count/count_in_time，target和exact均保留latest次序、平台限制、数量上限和日期边界。target不足时，scope-review.quality_stop={reason,evidence:[实际筛选记录/目录批次定位]}说明已检查范围、为何停止和未入选原因；不能只写“质量优先”当证明。scope_supported可通过但quantity_target_met仍为false、status为supported_quality_subset。来源受限、身份未核、边界未核和未读候选不会被这个字段放行；没有一项合格就交筛选结果说明，不生成空阅读器或虚构内容。精确数量不被擅改成样本。request变更用distill.py amend --request <新请求> --revision-evidence <用户修改依据>，旧请求存request-history，成功稿/会话不删除；范围回执重核，相关画像/集合重审。不同人物用新目录或明确身份依据，不能偷套旧准备。
 
-schema2／3旧任务保持原计数、默认值和接续行为，不自动切换均衡选样。新偏好需明确amend为schema4。content_screening.py --workspace <任务目录> --suggest可根据已经读过并登记星级的候选给出provisional建议和原因：代表集合兼顾偏好、已登记的阅读层与形式变化，严格latest保留时间优先。它不打分、不获取材料、不改selection.json；pending、同日先后疑问和数量不足按实返回，建议本身不证明目录覆盖或蒸馏完成。完整范围仍由source-ledger、scope-review、实际内容审校共同核实。
+schema2／3旧任务只保留可核材料与用户修改，另建schema4任务并重新审阅；不能沿用旧通过状态。已有schema4任务的范围变化走amend。content_screening.py --workspace <任务目录> --suggest可根据已经读过并登记星级的候选给出provisional建议和原因：代表集合兼顾偏好、已登记的阅读层与形式变化，严格latest保留时间优先。它不打分、不获取材料、不改selection.json；pending、同日先后疑问和数量不足按实返回，建议本身不证明目录覆盖或蒸馏完成。完整范围仍由source-ledger、scope-review、实际内容审校共同核实。
 
 ## 用户已提供材料的请求
 
@@ -53,4 +53,4 @@ schema2／3旧任务保持原计数、默认值和接续行为，不自动切换
 
 init后的工作区request.json是补齐默认字段和固定as_of的当前请求。后续scope-review.request复制这个完整对象，不重新手拼或拿未归一化的初始JSON代替。材料本身有来源就保留真实原链；不能为满足字段编造账号或网址。
 
-停止须可解释：精确集合边界及所选理解完成；代表性样本达到预算/有依据停止；提供集合全部已理解；受限仍有缺口只算阶段。数量不足若各目录真实穷尽，报告实际M项；不得说交了N项或绝对全网穷尽。
+停止须可解释：有继续价值的较早作品可分批向前查，不无限翻页。target可以在有依据的质量筛选后少收；exact不足仍记录缺口或真实穷尽；代表性样本有界停止；提供集合按用户是否要求筛选处理。受限与内容低价值分别记录。首页、文件名和交付摘要写实际M项及日期，不能把目标N写成已完成，更不能声称全网穷尽。

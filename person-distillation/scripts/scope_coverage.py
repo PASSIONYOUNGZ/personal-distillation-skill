@@ -1,7 +1,7 @@
 """Validate recorded scope evidence. This cannot prove the truth of observations."""
 from datetime import date
 from collections import Counter
-from request_scope import normalize, check_selection, sort_date
+from request_scope import normalize, check_selection, ordering_value
 from access_state import source_id
 
 def audit(request, selected, selection, ledger, review):
@@ -75,7 +75,7 @@ def audit(request, selected, selection, ledger, review):
             if scope['unit']=='per_platform':
                 chosen=selection.get('by_platform',{}).get(platform,[])
                 rows=[i for i in rows if i['id'] in chosen]
-            dates=[sort_date(i) for i in rows]
+            dates=[ordering_value(i,scope) for i in rows]
             cutoff=min(dates)[:10] if dates and all(isinstance(d,str) and d for d in dates) else None
         try:past=date.fromisoformat(r.get('oldest_contiguous_date',''))<date.fromisoformat(cutoff or '')
         except (ValueError,TypeError):past=False
@@ -83,7 +83,7 @@ def audit(request, selected, selection, ledger, review):
         if r.get('stop_reason')!='boundary_passed':gaps.append(prefix+'boundary stop unverified')
     if scope['order']=='latest':
         for item in selected:
-            try:date.fromisoformat((sort_date(item) or '')[:10])
+            try:date.fromisoformat((ordering_value(item,scope) or '')[:10])
             except (ValueError,TypeError):gaps.append('Unknown ordering date: '+item['id'])
         if not review.get('ordering_evidence') or review.get('ordering_uncertain'):
             gaps.append('Latest ordering/date ties not established')
@@ -92,9 +92,18 @@ def audit(request, selected, selection, ledger, review):
         target=scope['count']
         quantity=bool(platforms) and all(len(selection.get('by_platform',{}).get(p,[]))==target for p in platforms) if scope['unit']=='per_platform' else len(selected)==target
         bounded_interval=scope['mode']=='count_in_time' and not gaps
-        if not quantity and not ((all_ended or bounded_interval) and review.get('exhaustion_evidence')):
-            gaps.append('Count unmet and source exhaustion not established')
-    return result(gaps,quantity)
+        stop=review.get('quality_stop')
+        quality_stop=(scope.get('count_policy')=='target' and isinstance(stop,dict) and
+                      isinstance(stop.get('reason'),str) and bool(stop['reason'].strip()) and
+                      isinstance(stop.get('evidence'),list) and bool(stop['evidence']) and
+                      all(isinstance(e,str) and e.strip() for e in stop['evidence']))
+        if not quantity and not (quality_stop or ((all_ended or bounded_interval) and review.get('exhaustion_evidence'))):
+            gaps.append('Count unmet: record a reviewed quality stop for a flexible target, or source exhaustion')
+    report=result(gaps,quantity)
+    if quantity is False and not gaps and scope.get('count_policy')=='target':
+        report['status']='supported_quality_subset'
+        report['boundary']='Reviewed quality subset within discovered sources; target count was not reached. Do not label it the full requested N works.'
+    return report
 
 def result(gaps,quantity):
     return {'status':'supported_for_discovered_sources' if not gaps else 'incomplete','scope_supported':not gaps,

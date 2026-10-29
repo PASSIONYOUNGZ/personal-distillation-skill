@@ -9,6 +9,7 @@ def draft(workspace,kind,changed_only=False):
     if kind=='scope':
         return {'request':request,'selected_ids':selection,'scope_as_of':request['scope'].get('as_of'),
                 'as_of':None,'timezone':request['scope'].get('timezone'),'dedup_status':'pending','dedup_evidence':[],
+                **({'quality_stop':{'reason':'','evidence':[]}} if request['scope'].get('count_policy')=='target' else {}),
                 'channels':[],'next_action':'Read the actual scope boundary and fill only observed evidence. This draft cannot pass scope verification.'}
     from evidence_review import inputs,fingerprint,person_fingerprint,unit_inputs,review_contract,reusable_content_review
     data=inputs(w);previous=read(d/'quality-review.json') if (d/'quality-review.json').exists() else {}
@@ -37,7 +38,7 @@ def draft(workspace,kind,changed_only=False):
         if unit.get('kind')=='viewpoint':label='观点'
         result.setdefault('unit_reviews',[]).append({'unit_id':ident,'checks':[],
             'comprehension':[{'item_id':i,'source_point':'','evidence_locator':'','reader_section':label} for i in unit['item_ids']]})
-    result['next_action']='Read sources, explain main points and attribution, then fill evidence checks. Empty drafts are intentionally not accepted as reviewed.'
+    result['next_action']='Read the original before filling source_point; do not derive the review from the finished card. Recheck screening against the original learning value, not an added generic lesson. For deep reading, map concrete examples, causal steps and relevant inspected images into the explanation. Remove or rewrite weak items before accepting; quantity, headings and hashes do not certify quality. Empty drafts are intentionally not accepted as reviewed.'
     return result
 
 def main():

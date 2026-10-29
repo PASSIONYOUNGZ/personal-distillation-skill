@@ -1,5 +1,15 @@
 # Updates
 
+## 2026.10.29.4
+
+- 质量优先：普通“最近N项”将N作为目标上限，保持从近到远的顺序；合格内容不足可有界补找或依据实际筛选少收，不再为凑数保留低价值内容。明确要求精确数量时仍保留精确合同，时间范围与目录证据要求不变。
+- 深度解读强调具体背景、动作或论证、关键例子、比较条件与结果；配图须能解释对应内容。修订已有阅读版时逐篇检查，区分原作不足、采集缺失与整理遗漏，不用局部改写冒称完整重做。
+- 修复跨时区、跨午夜时的目录边界误判：目录覆盖与筛选统一使用任务时区，覆盖总量及每平台两种数量范围。
+- 更新README、安装与使用介绍，纠正旧schema兼容描述；案例目录按实际收录数显示，七份合计133项作品。既有案例HTML不变。
+- 原样发布已确认的2026.10.29.4-local候选：90个Skill文件，ZIP字节与候选一致。280项Python、19项JavaScript/DOM回归通过，中文/空格路径安装自检和覆盖保护通过。未新增全平台采集、真实浏览器视觉、离线重开或跨系统冷启动的通过声明。
+
+本版不增加模型、运行依赖、固定字数/配图配额或额外用户问卷。安装包不含研究原稿、私人配置、凭据或本地运行日志。
+
 ## 2026.10.29.1
 
 - Separate accepted quotation review from fulfillment of the original-display goal. A restriction-based excerpt no longer silently makes the final reader ready. Report affected items; retain genuine host limits and require an actual user decision before treating reduced display as the accepted goal. Standard full originals and an already explicit excerpt request add no second confirmation.

@@ -50,6 +50,13 @@ def normalize(value):
     if mode in ('count', 'count_in_time'):
         if type(count) is not int or count < 1: raise ValueError('count must be a positive integer')
     elif count is not None: raise ValueError('Count conflicts with scope mode; use sample_budget for representative scope')
+    # Omitted fields preserve an existing exact request. Agents explicitly record
+    # a flexible target when that matches the user's quality-first intent.
+    if 'count_policy' in s:
+        if mode not in ('count', 'count_in_time') or s['count_policy'] not in ('exact', 'target'):
+            raise ValueError('count_policy requires count/count_in_time and exact/target')
+        if s['count_policy']=='target' and not (isinstance(value.get('original_request'),str) and value['original_request'].strip()):
+            raise ValueError('A flexible quantity target must preserve the original request')
     if mode in ('time', 'count_in_time') or (mode == 'representative' and (start is not None or end is not None)):
         if not all(isinstance(x, str) and len(x) == 10 for x in (start, end)): raise ValueError('start/end require YYYY-MM-DD')
         if date.fromisoformat(start) > date.fromisoformat(end): raise ValueError('Reversed date interval')

@@ -154,8 +154,13 @@ def workspace_audit(workspace):
             result['errors'].append('Candidate frontier still has unassessed work: '+item['id'])
         if relevant and scope['order']=='latest' and item['id'] not in selection and rows.get(item['id'],{}).get('decision')=='keep':
             newer = scope['mode'] in ('time','all') or (frontier and day>frontier)
+            if scope.get('count_policy')=='target' and len(selection)<scope.get('count',0):newer=True
             if scope.get('unit')=='per_platform':
-                newer=any(platform_frontiers.get(s.get('platform')) and day>platform_frontiers[s['platform']] for s in item.get('sources',[]))
+                newer=any((platform_frontiers.get(s.get('platform')) and day>platform_frontiers[s['platform']]) or
+                          (scope.get('count_policy')=='target' and
+                           (not scope['platforms'] or s.get('platform') in scope['platforms']) and
+                           len(selection_data.get('by_platform',{}).get(s.get('platform'),[]))<scope.get('count',0))
+                          for s in item.get('sources',[]))
             if newer:result['errors'].append('Qualifying latest candidate omitted from selection: '+item['id'])
     # Final ratings must not reintroduce low-value or unrated items after screening.
     if (d/'cards.json').exists():

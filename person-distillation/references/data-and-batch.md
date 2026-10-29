@@ -14,7 +14,7 @@ Python核心仅标准库。Agent负责身份、材料理解与实际审阅，脚
 | cards/profile/notes | summary为具体内容简介；实际what/use/workflow/thinking/limits/directions/evidence/level、五星/理由与coverage；biography整体背景独立于作品窗口，avatar来源、经历事件与发表日期分清 |
 | quality-review | 每项checks、material_refs、coverage、remaining_gap及person_claims；schema4另核background_review；由accept-quality绑定全部材料/辅助图/卡片/画像/底稿 |
 | publication-review | 仅当最终reader-data改动标准构建的原文时，绑定变化项的完整来源与派生展示；full/excerpt/link_only分清，不用render-state代替审阅 |
-| scope-review | 当前归一request、as_of/固定scope_as_of、时区、selected_ids、同版与日期依据、各source_id目录证据或样本/提供集合证明 |
+| scope-review | 当前归一request、as_of/固定scope_as_of、时区、selected_ids、同版与日期依据、各source_id目录证据或样本/提供集合证明；count_policy=target数量不足时的quality_stop理由与实际筛选证据见范围合同 |
 | visual-review | 当前HTML SHA；preview_check记录预览状态，实际做过才附工具／视口／交互证据；offline_check独立记录。策略未执行或未测不冒充通过，实际failed不能按可交付成品放行 |
 | run-log/checkpoint | 步骤、动作、简短选择依据、耗时、产物、失败/待办/下一动作、数据schema，不留隐藏推理或凭据 |
 
